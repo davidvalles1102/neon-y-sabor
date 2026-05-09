@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery / Para Llevar — Neón y Sabor</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-body">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar__brand"><span class="neon-green">N</span><span class="neon-amber">y</span>S</div>
+  <nav class="sidebar__nav">
+    <a href="dashboard.html"       class="slink">📊 Dashboard</a>
+    <a href="orders.html"          class="slink">🧾 Órdenes</a>
+    <a href="kitchen.html"         class="slink">👨‍🍳 Cocina</a>
+    <a href="reservations.html"    class="slink">📅 Reservaciones</a>
+    <a href="delivery.html"        class="slink active">🛵 Delivery</a>
+    <a href="payments.html"        class="slink">💳 Pagos</a>
+    <a href="menu-management.html" class="slink">🍽️ Menú</a>
+    <a href="reports.html"         class="slink">📈 Reportes</a>
+    <a href="customers.html"       class="slink">👥 Clientes</a>
+  </nav>
+  <div class="sidebar__footer">
+    <div class="sidebar__user" id="sidebarUser">—</div>
+    <button class="slink slink--danger" id="logoutBtn">⏻ Salir</button>
+  </div>
+</aside>
+
+<div class="admin-main">
+  <header class="admin-topbar">
+    <button class="topbar__toggle" id="sidebarToggle">☰</button>
+    <h1 class="topbar__title">Delivery & Para Llevar</h1>
+    <div class="topbar__right">
+      <div class="realtime-dot" id="realtimeDot"><span class="dot"></span> En vivo</div>
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm delivery-filter active" data-filter="all">Todos</button>
+        <button class="btn btn-outline btn-sm delivery-filter" data-filter="delivery">🛵 Domicilio</button>
+        <button class="btn btn-outline btn-sm delivery-filter" data-filter="takeout">🥡 Para Llevar</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-content">
+
+    <!-- Stats -->
+    <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="stat-card stat-amber">
+        <div class="stat-label">Pendientes</div>
+        <div class="stat-value" id="statPending">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Preparando</div>
+        <div class="stat-value" id="statPreparing">0</div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-label">Listos</div>
+        <div class="stat-value" id="statReady">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">En Camino</div>
+        <div class="stat-value" id="statOnWay">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Entregados Hoy</div>
+        <div class="stat-value" id="statDelivered">0</div>
+      </div>
+    </div>
+
+    <!-- Delivery boards -->
+    <div class="delivery-board mt-24" id="deliveryBoard">
+      <p class="text-muted text-sm">Cargando órdenes...</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Order detail modal -->
+<div class="modal-backdrop hidden" id="orderDetailModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="detailModalTitle">Detalle de Orden</h3>
+      <button class="modal-close" id="detailModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="detailModalBody"></div>
+    <div class="modal-footer" id="detailModalFooter"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script type="module" src="js/delivery.js"></script>
+</body>
+</html>

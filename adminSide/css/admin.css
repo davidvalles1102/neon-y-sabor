@@ -693,6 +693,100 @@
 }
 .recent-order-row:last-child { border-bottom: none; }
 
+/* ─── Delivery Cards ─────────────────────────────────────────── */
+.delivery-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.delivery-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border-lit);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  animation: slideDown .3s ease;
+}
+
+.delivery-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+.delivery-card__type {
+  font-family: var(--font-d);
+  font-size: .95rem;
+  font-weight: 700;
+  flex: 1;
+}
+.delivery-card__timer {
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.delivery-card__customer {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.delivery-card__name    { font-weight: 600; font-size: .95rem; }
+.delivery-card__address { line-height: 1.4; }
+
+.delivery-card__items {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.delivery-card__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: .87rem;
+}
+
+.delivery-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-3);
+}
+
+/* ─── POS Order Type ─────────────────────────────────────────── */
+.pos-order-type-tabs {
+  display: flex;
+  background: var(--bg-4);
+  border-radius: var(--r-md);
+  padding: 3px;
+  gap: 3px;
+}
+.pos-order-type-btn {
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
+  font-size: .8rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all var(--t);
+  white-space: nowrap;
+}
+.pos-order-type-btn.active { background: var(--bg-2); color: var(--green); }
+
+.pos-customer-fields {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  background: var(--bg-2);
+}
+
 /* ─── Realtime dot ───────────────────────────────────────────── */
 .realtime-dot {
   display: flex;

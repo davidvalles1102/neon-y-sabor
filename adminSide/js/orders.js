@@ -10,6 +10,7 @@ let selectedTable= null
 let activeCat    = 'all'
 let selectedPayMethod = 'cash'
 let linkedCustomer    = null
+let orderType         = 'dine_in'   // 'dine_in' | 'takeout' | 'delivery'
 
 async function init() {
   const ctx = await initAdminShell(['admin', 'waiter'])
@@ -17,8 +18,32 @@ async function init() {
   profile = ctx.profile
 
   await Promise.all([loadTables(), loadMenu()])
+  setupOrderTypeTabs()
   setupTicket()
   setupPayModal()
+}
+
+function setupOrderTypeTabs() {
+  document.querySelectorAll('.pos-order-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      orderType = btn.dataset.type
+      document.querySelectorAll('.pos-order-type-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+
+      const tableWrap   = document.getElementById('tablePickerWrap')
+      const custFields  = document.getElementById('posCustomerFields')
+      const addrField   = document.getElementById('posCustAddress')
+
+      tableWrap.style.display  = orderType === 'dine_in' ? '' : 'none'
+      custFields.classList.toggle('hidden', orderType === 'dine_in')
+      addrField.classList.toggle('hidden', orderType !== 'delivery')
+
+      // Reset current order when type changes
+      currentOrder  = null
+      selectedTable = null
+      renderTicket()
+    })
+  })
 }
 
 // ─── Tables ───────────────────────────────────────────────────────
@@ -90,7 +115,7 @@ function renderMenuGrid() {
 
   grid.querySelectorAll('.pos-item-card').forEach(card => {
     card.addEventListener('click', () => {
-      if (!currentOrder) { toast('Selecciona una mesa primero', 'warning'); return }
+      if (!currentOrder) { toast(orderType === 'dine_in' ? 'Selecciona una mesa primero' : 'Crea una orden primero', 'warning'); return }
       addItemToTicket({
         id:    card.dataset.id,
         name:  card.dataset.name,
@@ -109,7 +134,11 @@ function setupTicket() {
   })
 
   document.getElementById('newOrderBtn').addEventListener('click', async () => {
-    if (!selectedTable) { toast('Selecciona una mesa', 'warning'); return }
+    if (orderType === 'dine_in' && !selectedTable) { toast('Selecciona una mesa', 'warning'); return }
+    if (orderType !== 'dine_in') {
+      const name = document.getElementById('posCustName').value.trim()
+      if (!name) { toast('Ingresa el nombre del cliente', 'warning'); return }
+    }
     currentOrder = null
     await loadOrCreateOrder(true)
   })
@@ -136,16 +165,26 @@ async function loadOrCreateOrder(forceNew = false) {
     }
   }
 
+  const custName    = document.getElementById('posCustName')?.value.trim()    || null
+  const custPhone   = document.getElementById('posCustPhone')?.value.trim()   || null
+  const custAddress = document.getElementById('posCustAddress')?.value.trim() || null
+
   const { data, error } = await supabase.from('orders').insert({
-    table_id:  selectedTable.id,
-    waiter_id: profile.id,
-    status:    'open'
+    table_id:         orderType === 'dine_in' ? selectedTable?.id : null,
+    waiter_id:        profile.id,
+    order_type:       orderType,
+    delivery_name:    custName,
+    delivery_phone:   custPhone,
+    delivery_address: orderType === 'delivery' ? custAddress : null,
+    delivery_status:  orderType !== 'dine_in' ? 'pending' : null,
+    status:           'open'
   }).select().single()
 
   if (error) { toast('Error al crear orden', 'error'); return }
-  currentOrder = { id: data.id, table_id: selectedTable.id, items: [] }
+  currentOrder = { id: data.id, table_id: selectedTable?.id ?? null, items: [] }
   renderTicket()
-  toast(`Orden nueva — Mesa ${selectedTable.number}`)
+  const toastMsg = orderType === 'dine_in' ? `Orden nueva — Mesa ${selectedTable.number}` : orderType === 'takeout' ? 'Orden Para Llevar creada' : 'Orden Domicilio creada'
+  toast(toastMsg)
 }
 
 function mapItems(rawItems) {
@@ -203,7 +242,8 @@ async function recalcOrder() {
 
 function renderTicket() {
   const table  = selectedTable
-  document.getElementById('ticketTable').textContent   = table ? `Mesa ${table.number}` : 'Mesa —'
+  const typeLabels = { dine_in: table ? `Mesa ${table.number}` : 'Mesa —', takeout: '🥡 Para Llevar', delivery: '🛵 Domicilio' }
+  document.getElementById('ticketTable').textContent   = typeLabels[orderType]
   document.getElementById('ticketWaiter').textContent  = profile.full_name || '—'
   document.getElementById('ticketOrderId').textContent = currentOrder ? `#${currentOrder.id.slice(0,8)}` : ''
 
@@ -240,7 +280,9 @@ function renderTicket() {
 async function sendToKitchen() {
   if (!currentOrder) return
   const notes = document.getElementById('orderNotes').value.trim()
-  const { error } = await supabase.from('orders').update({ status: 'in_kitchen', notes }).eq('id', currentOrder.id)
+  const update = { status: 'in_kitchen', notes }
+  if (orderType !== 'dine_in') update.delivery_status = 'preparing'
+  const { error } = await supabase.from('orders').update(update).eq('id', currentOrder.id)
   if (error) { toast('Error al enviar a cocina', 'error'); return }
   toast('Orden enviada a cocina 👨‍🍳', 'success')
   document.getElementById('sendKitchenBtn').disabled = true
@@ -251,6 +293,10 @@ function clearTicket() {
   currentOrder = null
   selectedTable = null
   document.getElementById('tablePicker').value = ''
+  document.getElementById('posCustName').value    = ''
+  document.getElementById('posCustPhone').value   = ''
+  document.getElementById('posCustAddress').value = ''
+  document.getElementById('orderNotes').value     = ''
   renderTicket()
 }
 
@@ -342,7 +388,9 @@ async function processPayment() {
   if (payErr) { toast('Error al procesar pago', 'error'); btn.disabled = false; return }
 
   await supabase.from('orders').update({ status: 'paid' }).eq('id', currentOrder.id)
-  await supabase.from('restaurant_tables').update({ status: 'available' }).eq('id', selectedTable.id)
+  if (orderType === 'dine_in' && selectedTable) {
+    await supabase.from('restaurant_tables').update({ status: 'available' }).eq('id', selectedTable.id)
+  }
 
   // Award loyalty points (1 pt per $1 spent)
   if (linkedCustomer) {
@@ -370,7 +418,7 @@ function renderReceipt(receiptNo, change) {
       <div class="receipt__logo">Neón y Sabor Mi Rancho</div>
       <div class="receipt__address">Su restaurante favorito<br>${fmt.datetime(new Date())}</div>
       <hr class="receipt__divider">
-      <div>Mesa: ${selectedTable?.number ?? '—'} | Mesero: ${profile.full_name}</div>
+      <div>${orderType === 'dine_in' ? `Mesa: ${selectedTable?.number ?? '—'}` : orderType === 'takeout' ? '🥡 Para Llevar' : '🛵 Domicilio'} | Mesero: ${profile.full_name}</div>
       <div>Recibo: ${receiptNo}</div>
       <hr class="receipt__divider">
       ${items.map(i => `<div class="receipt__item"><span>${i.qty}x ${i.name}</span><span>${fmt.currency(i.price * i.qty)}</span></div>`).join('')}

@@ -17,6 +17,7 @@
     <a href="orders.html"          class="slink active">🧾 Órdenes</a>
     <a href="kitchen.html"         class="slink">👨‍🍳 Cocina</a>
     <a href="reservations.html"    class="slink">📅 Reservaciones</a>
+    <a href="delivery.html"        class="slink">🛵 Delivery</a>
     <a href="payments.html"        class="slink">💳 Pagos</a>
     <a href="menu-management.html" class="slink">🍽️ Menú</a>
     <a href="reports.html"         class="slink">📈 Reportes</a>
@@ -33,8 +34,14 @@
     <button class="topbar__toggle" id="sidebarToggle">☰</button>
     <h1 class="topbar__title">Terminal POS</h1>
     <div class="topbar__right">
-      <!-- Table selector -->
-      <div class="table-picker">
+      <!-- Order type -->
+      <div class="pos-order-type-tabs">
+        <button class="pos-order-type-btn active" data-type="dine_in">🪑 Mesa</button>
+        <button class="pos-order-type-btn" data-type="takeout">🥡 Para Llevar</button>
+        <button class="pos-order-type-btn" data-type="delivery">🛵 Domicilio</button>
+      </div>
+      <!-- Table selector (dine_in only) -->
+      <div class="table-picker" id="tablePickerWrap">
         <label class="form-label" style="white-space:nowrap">Mesa:</label>
         <select id="tablePicker" class="form-control" style="width:140px">
           <option value="">Seleccionar...</option>
@@ -71,6 +78,13 @@
           <div class="ticket-waiter text-sm text-muted" id="ticketWaiter">—</div>
         </div>
         <div class="ticket-order-id text-xs text-muted" id="ticketOrderId"></div>
+      </div>
+
+      <!-- Customer fields for takeout / delivery -->
+      <div class="pos-customer-fields hidden" id="posCustomerFields">
+        <input type="text" id="posCustName"    class="form-control" placeholder="Nombre del cliente *">
+        <input type="tel"  id="posCustPhone"   class="form-control" placeholder="Teléfono *">
+        <input type="text" id="posCustAddress" class="form-control hidden" placeholder="Dirección de entrega *">
       </div>
 
       <!-- Items list -->
