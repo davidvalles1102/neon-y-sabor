@@ -42,18 +42,18 @@ export async function requireAuth(allowedRoles = []) {
 }
 
 // ─── Tax config ──────────────────────────────────────────────────────────────
-export const TAX_RATE = 0.13  // 13% IVA El Salvador
+export const TAX_RATE = 0.08  // 8% IVA Colombia — restaurantes y bares
 
 export function calcTotals(subtotal) {
-  const tax   = +(subtotal * TAX_RATE).toFixed(2)
-  const total = +(subtotal + tax).toFixed(2)
-  return { subtotal: +subtotal.toFixed(2), tax, total }
+  const tax   = Math.round(subtotal * TAX_RATE)
+  const total = Math.round(subtotal + tax)
+  return { subtotal: Math.round(subtotal), tax, total }
 }
 
 // ─── Format helpers ──────────────────────────────────────────────────────────
 export const fmt = {
-  currency: (n) => `$${(+n).toFixed(2)}`,
-  date: (d) => new Date(d).toLocaleDateString('es-SV', { year:'numeric', month:'short', day:'numeric' }),
-  time: (d) => new Date(d).toLocaleTimeString('es-SV', { hour:'2-digit', minute:'2-digit' }),
+  currency: (n) => '$ ' + Math.round(+(n ?? 0)).toLocaleString('es-CO'),
+  date: (d) => new Date(d).toLocaleDateString('es-CO', { year:'numeric', month:'short', day:'numeric' }),
+  time: (d) => new Date(d).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' }),
   datetime: (d) => `${fmt.date(d)} ${fmt.time(d)}`
 }

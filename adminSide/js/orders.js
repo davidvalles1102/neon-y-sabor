@@ -424,7 +424,7 @@ function renderReceipt(receiptNo, change) {
       ${items.map(i => `<div class="receipt__item"><span>${i.qty}x ${i.name}</span><span>${fmt.currency(i.price * i.qty)}</span></div>`).join('')}
       <hr class="receipt__divider">
       <div class="receipt__item"><span>Subtotal</span><span>${fmt.currency(currentOrder?.subtotal ?? 0)}</span></div>
-      <div class="receipt__item"><span>IVA 13%</span><span>${fmt.currency(currentOrder?.tax ?? 0)}</span></div>
+      <div class="receipt__item"><span>IVA 8%</span><span>${fmt.currency(currentOrder?.tax ?? 0)}</span></div>
       <div class="receipt__item receipt__total"><span>TOTAL</span><span>${fmt.currency(currentOrder?.total ?? 0)}</span></div>
       ${selectedPayMethod === 'cash' ? `
         <div class="receipt__item"><span>Efectivo</span><span>${fmt.currency(parseFloat(document.getElementById('cashReceived').value)||0)}</span></div>
