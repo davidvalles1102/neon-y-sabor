@@ -693,6 +693,31 @@
 }
 .recent-order-row:last-child { border-bottom: none; }
 
+/* ─── Realtime dot ───────────────────────────────────────────── */
+.realtime-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: .5;
+  transition: opacity var(--ts);
+}
+.realtime-dot .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: var(--glow-green-s);
+  animation: blink 2s ease-in-out infinite;
+}
+.realtime-dot.dot--active {
+  opacity: 1;
+  color: var(--green);
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
 /* ─── Responsive tweaks ──────────────────────────────────────── */
 @media (max-width: 640px) {
   .admin-content { padding: 16px; }
