@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment / credentials
+.env
+.env.local
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json

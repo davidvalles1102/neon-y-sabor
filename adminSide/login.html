@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neón y Sabor — Staff Login</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="login-page">
+
+<div class="login-bg">
+  <div class="login-grid"></div>
+  <div class="login-glow login-glow--green"></div>
+  <div class="login-glow login-glow--amber"></div>
+</div>
+
+<div class="login-card">
+  <div class="login-logo">
+    <span class="neon-green">Neón</span> y Sabor<br>
+    <span class="text-secondary text-sm" style="font-weight:400;font-family:var(--font)">Panel de Personal</span>
+  </div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label class="form-label">Correo</label>
+      <input type="email" id="email" class="form-control" placeholder="staff@neon.com" required>
+    </div>
+    <div class="form-group mt-16">
+      <label class="form-label">Contraseña</label>
+      <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+    </div>
+    <div id="loginError" class="alert alert-error hidden mt-16"></div>
+    <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn" style="margin-top:20px">
+      Ingresar al Panel
+    </button>
+  </form>
+
+  <p class="text-muted text-sm text-center mt-16">
+    Solo para personal autorizado del restaurante.
+  </p>
+</div>
+
+<div id="toast-container"></div>
+<script type="module" src="js/admin-auth.js"></script>
+</body>
+</html>

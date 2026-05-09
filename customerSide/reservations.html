@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neón y Sabor — Reservaciones</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/customer.css">
+</head>
+<body>
+
+<nav class="cust-nav" id="navbar">
+  <div class="cust-nav__inner">
+    <a href="index.html" class="cust-nav__brand">
+      <span class="brand-neon">Neón</span>
+      <span class="brand-sep"> y </span>
+      <span class="brand-rest">Sabor Mi Rancho</span>
+    </a>
+    <div class="cust-nav__links">
+      <a href="index.html"        class="nav-link">Menú</a>
+      <a href="reservations.html" class="nav-link active">Reservaciones</a>
+      <a href="profile.html"      class="nav-link">Mi Perfil</a>
+      <a href="auth.html"         class="btn btn-primary btn-sm" id="nav-auth-btn">Ingresar</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero page-hero--sm">
+  <h1>Reserva tu <span class="neon-amber">Mesa</span></h1>
+  <p class="text-secondary">Asegura tu lugar para una experiencia única</p>
+</div>
+
+<div class="reserv-layout">
+
+  <!-- FORM CARD -->
+  <div class="card reserv-form-card">
+    <h2 class="mb-20">Nueva Reservación</h2>
+
+    <div id="authGate" class="auth-gate hidden">
+      <p class="text-secondary">Para hacer una reservación debes tener una cuenta.</p>
+      <a href="auth.html" class="btn btn-primary mt-16">Ingresar / Registrarse</a>
+    </div>
+
+    <form id="reservForm" class="flex-col gap-16">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Fecha</label>
+          <input type="date" id="resDate" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hora</label>
+          <select id="resTime" class="form-control" required>
+            <option value="">Seleccionar...</option>
+            <option value="12:00">12:00 PM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="19:00">7:00 PM</option>
+            <option value="20:00">8:00 PM</option>
+            <option value="21:00">9:00 PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">N.º de personas</label>
+          <select id="resParty" class="form-control" required>
+            <option value="">Seleccionar...</option>
+            <option value="1">1 persona</option>
+            <option value="2">2 personas</option>
+            <option value="3">3 personas</option>
+            <option value="4">4 personas</option>
+            <option value="5">5 personas</option>
+            <option value="6">6 personas</option>
+            <option value="7">7 personas</option>
+            <option value="8">8 personas</option>
+            <option value="9">9 o más</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zona preferida</label>
+          <select id="resZone" class="form-control">
+            <option value="">Sin preferencia</option>
+            <option value="interior">Interior</option>
+            <option value="terraza">Terraza</option>
+            <option value="barra">Barra</option>
+            <option value="privado">Salón Privado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notas especiales (alergias, celebraciones, etc.)</label>
+        <textarea id="resNotes" class="form-control" rows="3" placeholder="Ej: Cumpleaños, alergia a mariscos..."></textarea>
+      </div>
+
+      <div id="reservMsg" class="alert hidden"></div>
+
+      <button type="submit" class="btn btn-primary btn-lg">Confirmar Reservación</button>
+    </form>
+  </div>
+
+  <!-- MY RESERVATIONS -->
+  <div class="card reserv-list-card">
+    <h2 class="mb-16">Mis Reservaciones</h2>
+    <div id="myReservations">
+      <p class="text-muted text-sm">Cargando...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info cards -->
+<div class="info-grid">
+  <div class="info-card">
+    <div class="info-icon neon-green">🕐</div>
+    <h4>Horarios</h4>
+    <p class="text-secondary text-sm">Lun–Jue: 12pm – 10pm<br>Vie–Dom: 12pm – 12am</p>
+  </div>
+  <div class="info-card">
+    <div class="info-icon neon-amber">📞</div>
+    <h4>¿Necesitas ayuda?</h4>
+    <p class="text-secondary text-sm">Llámanos al<br>+503 0000-0000</p>
+  </div>
+  <div class="info-card">
+    <div class="info-icon neon-green">📋</div>
+    <h4>Política</h4>
+    <p class="text-secondary text-sm">Espera máxima 15 min.<br>Cancela con 2h de anticipación.</p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script type="module" src="js/reservations.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cocina — Neón y Sabor</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-body kitchen-body">
+
+<!-- Minimal top bar for kitchen display -->
+<header class="kitchen-topbar">
+  <div class="kitchen-brand">
+    <span class="neon-green">Cocina</span>
+    <span class="text-muted"> — Neón y Sabor Mi Rancho</span>
+  </div>
+  <div class="kitchen-topbar__right">
+    <div class="live-clock" id="liveClock"></div>
+    <a href="dashboard.html" class="btn btn-ghost btn-sm">← Panel</a>
+  </div>
+</header>
+
+<div class="kitchen-layout">
+
+  <!-- Column: Entrantes (in_kitchen) -->
+  <div class="kitchen-col">
+    <div class="kitchen-col__header">
+      <span class="badge badge-amber" style="font-size:.9rem;padding:6px 14px">🔥 EN PREPARACIÓN</span>
+      <span class="badge badge-muted" id="countInKitchen">0</span>
+    </div>
+    <div class="kitchen-orders" id="ordersInKitchen">
+      <div class="kitchen-empty">Sin órdenes en preparación</div>
+    </div>
+  </div>
+
+  <!-- Column: Ready -->
+  <div class="kitchen-col">
+    <div class="kitchen-col__header">
+      <span class="badge badge-green" style="font-size:.9rem;padding:6px 14px">✅ LISTO PARA SERVIR</span>
+      <span class="badge badge-muted" id="countReady">0</span>
+    </div>
+    <div class="kitchen-orders" id="ordersReady">
+      <div class="kitchen-empty">Sin órdenes listas</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+<script type="module" src="js/kitchen.js"></script>
+</body>
+</html>

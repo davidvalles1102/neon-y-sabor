@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neón y Sabor Mi Rancho — Menú</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/customer.css">
+</head>
+<body>
+
+<!-- ── Nav ─────────────────────────────────────────────────── -->
+<nav class="cust-nav" id="navbar">
+  <div class="cust-nav__inner">
+    <a href="index.html" class="cust-nav__brand">
+      <span class="brand-neon">Neón</span>
+      <span class="brand-sep"> y </span>
+      <span class="brand-rest">Sabor Mi Rancho</span>
+    </a>
+    <div class="cust-nav__links">
+      <a href="index.html" class="nav-link active">Menú</a>
+      <a href="reservations.html" class="nav-link">Reservaciones</a>
+      <a href="profile.html"      class="nav-link" id="nav-profile">Mi Perfil</a>
+      <a href="auth.html"         class="btn btn-primary btn-sm" id="nav-auth-btn">Ingresar</a>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Menú</a>
+    <a href="reservations.html">Reservaciones</a>
+    <a href="profile.html">Mi Perfil</a>
+    <a href="auth.html" id="mobile-auth-link">Ingresar</a>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero__bg-grid"></div>
+  <div class="hero__content">
+    <p class="hero__eyebrow neon-amber">Bienvenido a</p>
+    <h1 class="hero__title">
+      <span class="neon-green">Neón</span>
+      <span class="hero__title-rest"> y Sabor<br>Mi Rancho</span>
+    </h1>
+    <p class="hero__sub">Sabores auténticos con un toque vibrante.<br>Ordena en línea o haz tu reservación.</p>
+    <div class="hero__actions">
+      <a href="#menu" class="btn btn-primary btn-lg">Ver Menú</a>
+      <a href="reservations.html" class="btn btn-outline btn-lg">Reservar Mesa</a>
+    </div>
+  </div>
+  <div class="hero__neon-lines" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+</header>
+
+<!-- ── Menu Section ──────────────────────────────────────────── -->
+<section id="menu" class="menu-section">
+  <div class="section-header">
+    <h2 class="section-title">Nuestro <span class="neon-amber">Menú</span></h2>
+    <p class="section-sub">Ingredientes frescos, sabor de rancho</p>
+  </div>
+
+  <!-- Category Tabs -->
+  <div class="category-tabs" id="categoryTabs">
+    <button class="cat-tab active" data-cat="all">Todos</button>
+    <!-- Dynamic tabs will be injected here -->
+  </div>
+
+  <!-- Search bar -->
+  <div class="menu-search-wrap">
+    <input type="text" id="menuSearch" class="form-control menu-search" placeholder="Buscar platillo...">
+  </div>
+
+  <!-- Menu Grid -->
+  <div class="menu-grid" id="menuGrid">
+    <!-- Loading skeleton -->
+    <div class="menu-skeleton" id="menuSkeleton">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Featured / Promotion Banner ──────────────────────────── -->
+<section class="promo-band">
+  <div class="promo-band__inner">
+    <p class="neon-amber" style="font-family:var(--font-d);font-size:1.4rem;font-weight:700;">¡Gana puntos con cada visita!</p>
+    <p class="text-secondary">Regístrate y acumula puntos de lealtad en cada orden. Canjéalos por platillos gratis.</p>
+    <a href="auth.html?mode=register" class="btn btn-amber mt-16">Crear Cuenta</a>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────── -->
+<footer class="cust-footer">
+  <div class="footer-brand">
+    <span class="neon-green">Neón</span> y Sabor Mi Rancho
+  </div>
+  <p class="text-muted text-sm">© 2025 · Todos los derechos reservados</p>
+</footer>
+
+<div id="toast-container"></div>
+
+<script type="module" src="js/menu.js"></script>
+</body>
+</html>
