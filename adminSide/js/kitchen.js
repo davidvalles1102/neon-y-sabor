@@ -17,6 +17,8 @@ setInterval(tick, 1000)
 
 // Elapsed timer map: orderId → startTimestamp
 const startTimes = new Map()
+// Order metadata needed for handleAction
+const orderMeta  = new Map()  // orderId → { order_type }
 
 // ─── Load active kitchen orders ────────────────────────────────
 async function loadOrders() {
@@ -50,15 +52,40 @@ function renderColumn(elId, orders) {
 
 function buildCard(order) {
   if (!startTimes.has(order.id)) startTimes.set(order.id, new Date(order.updated_at || order.created_at))
-  const elapsed = Math.floor((Date.now() - startTimes.get(order.id)) / 1000 / 60)
-  const timerCls = elapsed < 10 ? 'timer--ok' : elapsed < 20 ? 'timer--warn' : 'timer--urgent'
-  const cardCls  = order.status === 'ready' ? 'kitchen-card--ready' : (elapsed >= 20 ? 'kitchen-card--urgent' : '')
-  const items    = order.order_items || []
+  orderMeta.set(order.id, { order_type: order.order_type })
+
+  const elapsed   = Math.floor((Date.now() - startTimes.get(order.id)) / 1000 / 60)
+  const timerCls  = elapsed < 10 ? 'timer--ok' : elapsed < 20 ? 'timer--warn' : 'timer--urgent'
+  const cardCls   = order.status === 'ready' ? 'kitchen-card--ready' : (elapsed >= 20 ? 'kitchen-card--urgent' : '')
+  const items     = order.order_items || []
+  const isExternal = ['delivery', 'takeout'].includes(order.order_type)
+
+  // Header: show table for dine-in, customer name + type for delivery/takeout
+  const headerLabel = isExternal
+    ? `${order.order_type === 'delivery' ? '🛵' : '🥡'} ${order.delivery_name || 'Sin nombre'}`
+    : `Mesa ${order.restaurant_tables?.number ?? '—'}`
+
+  // Footer actions differ by type and status
+  let actions = ''
+  if (order.status === 'in_kitchen') {
+    actions = `
+      <button class="btn btn-primary btn-sm btn-full" data-action="ready" data-id="${order.id}">✅ Marcar Listo</button>`
+  } else if (isExternal) {
+    // Delivery/takeout ready — delivery board handles next step
+    actions = `
+      <div class="text-xs text-muted" style="text-align:center;padding:6px 0">✅ Listo — esperando al repartidor</div>
+      <button class="btn btn-ghost btn-sm btn-full" data-action="back" data-id="${order.id}">↩ Regresar a cocina</button>`
+  } else {
+    // Dine-in ready
+    actions = `
+      <button class="btn btn-outline btn-sm btn-full" data-action="delivered" data-id="${order.id}">🍽️ Entregado en mesa</button>
+      <button class="btn btn-ghost btn-sm" data-action="back" data-id="${order.id}" title="Regresar a cocina">↩</button>`
+  }
 
   return `
     <div class="kitchen-card ${cardCls}" id="kcard-${order.id}">
       <div class="kitchen-card__header">
-        <div class="kitchen-card__table">Mesa ${order.restaurant_tables?.number ?? '—'}</div>
+        <div class="kitchen-card__table">${headerLabel}</div>
         <div class="kitchen-card__timer ${timerCls}" data-orderid="${order.id}">⏱ ${elapsed}m</div>
       </div>
       <div class="kitchen-card__items">
@@ -74,11 +101,7 @@ function buildCard(order) {
         ${order.notes ? `<div class="kitchen-item" style="color:var(--amber)">📋 ${order.notes}</div>` : ''}
       </div>
       <div class="kitchen-card__actions">
-        ${order.status === 'in_kitchen'
-          ? `<button class="btn btn-primary btn-sm btn-full" data-action="ready" data-id="${order.id}">✅ Marcar Listo</button>`
-          : `<button class="btn btn-outline btn-sm btn-full" data-action="delivered" data-id="${order.id}">🍽️ Entregado</button>`
-        }
-        <button class="btn btn-ghost btn-sm" data-action="back" data-id="${order.id}" title="Regresar a cocina">↩</button>
+        ${actions}
       </div>
     </div>`
 }
@@ -88,10 +111,17 @@ async function handleAction(action, orderId) {
   const newStatus = statusMap[action]
   if (!newStatus) return
 
-  const { error } = await supabase.from('orders').update({
-    status:     newStatus,
-    updated_at: new Date().toISOString()
-  }).eq('id', orderId)
+  const updates = { status: newStatus, updated_at: new Date().toISOString() }
+
+  // Sync delivery_status so the delivery board and customer tracking update too
+  const meta = orderMeta.get(orderId)
+  if (meta && ['delivery', 'takeout'].includes(meta.order_type)) {
+    if (action === 'ready') updates.delivery_status = 'ready'
+    if (action === 'back')  updates.delivery_status = 'preparing'
+    // 'delivered' for delivery/takeout is handled by the delivery board, not kitchen
+  }
+
+  const { error } = await supabase.from('orders').update(updates).eq('id', orderId)
 
   if (error) { toast('Error al actualizar', 'error'); return }
   if (action === 'delivered') startTimes.delete(orderId)

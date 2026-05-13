@@ -163,7 +163,14 @@ function buildCard(order) {
 
 // ─── Advance status ───────────────────────────────────────────────
 async function advanceStatus(orderId, newDeliveryStatus) {
-  const orderStatus = newDeliveryStatus === 'delivered' ? 'delivered' : 'open'
+  // Keep `status` in sync so kitchen.js can see the order
+  const statusMap = {
+    preparing:  'in_kitchen',
+    ready:      'ready',
+    on_the_way: 'ready',
+    delivered:  'delivered'
+  }
+  const orderStatus = statusMap[newDeliveryStatus] ?? 'open'
   const { error } = await supabase
     .from('orders')
     .update({ delivery_status: newDeliveryStatus, status: orderStatus, updated_at: new Date().toISOString() })
