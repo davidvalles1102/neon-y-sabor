@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Pedidos — Neón y Sabor</title>
+  <link rel="stylesheet" href="../shared/css/design-system.css">
+  <link rel="stylesheet" href="css/customer.css">
+</head>
+<body>
+
+<nav class="cust-nav" id="navbar">
+  <div class="cust-nav__inner">
+    <a href="index.html" class="cust-nav__brand">
+      <span class="brand-neon">Neón</span>
+      <span class="brand-sep"> y </span>
+      <span class="brand-rest">Sabor Mi Rancho</span>
+    </a>
+    <div class="cust-nav__links">
+      <a href="index.html"        class="nav-link">Menú</a>
+      <a href="order.html"        class="nav-link">🛵 Ordenar</a>
+      <a href="mis-pedidos.html"  class="nav-link active">📦 Mis Pedidos</a>
+      <a href="reservations.html" class="nav-link">Reservaciones</a>
+      <a href="profile.html"      class="nav-link">Mi Perfil</a>
+    </div>
+  </div>
+</nav>
+
+<div class="mis-pedidos-layout">
+
+  <!-- Header -->
+  <div class="mis-pedidos-header">
+    <div>
+      <h2 class="mis-pedidos-title">📦 Mis Pedidos</h2>
+      <p class="text-muted text-sm mt-4">Consulta el estado de tus órdenes de domicilio o para llevar</p>
+    </div>
+    <div class="track-live">
+      <div class="track-live-dot" id="liveDot" style="opacity:.4"></div>
+      <span>En vivo</span>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="card mis-pedidos-search-card">
+    <form id="searchForm" class="mis-pedidos-search-form">
+      <div class="form-group" style="flex:1;margin:0">
+        <label class="form-label">Número de teléfono con el que hiciste el pedido</label>
+        <input type="tel" id="phoneInput" class="form-control"
+               placeholder="Ej. 312 828 2045" autocomplete="tel">
+      </div>
+      <button type="submit" class="btn btn-primary" style="align-self:flex-end">🔍 Buscar</button>
+    </form>
+  </div>
+
+  <!-- Results -->
+  <div id="ordersResult" class="mis-pedidos-results">
+    <div class="mis-pedidos-empty">
+      <div style="font-size:2.5rem">📱</div>
+      <p class="text-muted text-sm mt-8">Ingresa tu número para ver tus pedidos</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="cust-footer">
+  <div class="footer-brand">
+    <span class="neon-green">Neón</span> y Sabor Mi Rancho
+  </div>
+  <div class="footer-details">
+    <span>📍 Piamonte, Cauca, Colombia</span>
+    <span>📞 312 828 2045</span>
+    <span>🕐 Lun–Dom: 6:30 am – 3:30 pm · 4:00 pm – 11:00 pm</span>
+  </div>
+  <div class="footer-divider"></div>
+  <p class="footer-copy">© 2026 Neón y Sabor Mi Rancho — Todos los derechos reservados</p>
+</footer>
+
+<div id="toast-container"></div>
+<script type="module" src="js/mis-pedidos.js"></script>
+</body>
+</html>

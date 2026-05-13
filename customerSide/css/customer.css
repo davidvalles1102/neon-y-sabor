@@ -530,3 +530,169 @@
 .text-center { text-align: center; }
 .mb-16 { margin-bottom: 16px; }
 .mb-20 { margin-bottom: 20px; }
+
+/* ─── Mis Pedidos page ───────────────────────────────────────── */
+.mis-pedidos-layout {
+  max-width: 720px;
+  margin: 88px auto 60px;
+  padding: 0 20px;
+}
+
+.mis-pedidos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.mis-pedidos-title {
+  font-family: var(--font-d);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mis-pedidos-search-card { margin-bottom: 24px; }
+
+.mis-pedidos-search-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.mis-pedidos-empty {
+  text-align: center;
+  padding: 48px 20px;
+}
+
+.mis-pedidos-section-title {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.mis-pedidos-results { display: flex; flex-direction: column; gap: 0; }
+
+/* ─── Order card ─────────────────────────────────────────────── */
+.mis-pedidos-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  transition: border-color .3s;
+}
+
+.mis-pedidos-card--active {
+  border-color: var(--border-lit);
+  box-shadow: 0 0 0 1px var(--border-lit);
+}
+
+.mis-pedidos-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mis-pedidos-card__items {
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.mis-pedidos-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mis-pedidos-card__progress {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Mini stepper ───────────────────────────────────────────── */
+.mini-stepper {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.mini-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 54px;
+}
+
+.mini-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  transition: background .4s;
+  z-index: 0;
+}
+
+.mini-step.done:not(:last-child)::after { background: var(--green); }
+
+.mini-step__dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  position: relative;
+  z-index: 1;
+  transition: all .3s;
+  flex-shrink: 0;
+}
+
+.mini-step.done .mini-step__dot {
+  border-color: var(--green);
+  background: rgba(0,220,130,.15);
+}
+
+.mini-step.active .mini-step__dot {
+  border-color: var(--amber);
+  background: var(--amber-alpha);
+  animation: pulse-active .9s ease-in-out infinite alternate;
+}
+
+.mini-step__label {
+  font-size: .6rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 5px;
+  color: var(--text-muted);
+  max-width: 52px;
+  line-height: 1.2;
+}
+
+.mini-step.done   .mini-step__label { color: var(--green); }
+.mini-step.active .mini-step__label { color: var(--amber); }
+
+.mt-24 { margin-top: 24px; }
