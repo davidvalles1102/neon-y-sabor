@@ -47,6 +47,10 @@ export async function initAdminShell(allowedRoles = ['admin', 'waiter', 'kitchen
   const session = await getSession()
   if (session) {
     const p = await getProfile(session.user.id)
+    if (!['admin', 'waiter', 'kitchen'].includes(p?.role)) {
+      await supabase.auth.signOut()
+      return  // Stay on login page
+    }
     redirectByRole(p.role)
     return
   }
