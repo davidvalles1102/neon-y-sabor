@@ -81,6 +81,21 @@
     <button type="submit" class="btn btn-primary btn-full">Enviar enlace</button>
     <button type="button" id="backToLogin" class="btn btn-ghost btn-full mt-8">← Volver al login</button>
   </form>
+
+  <!-- RESET PASSWORD FORM (shown after clicking email recovery link) -->
+  <form id="resetForm" class="auth-form hidden">
+    <p class="text-secondary text-sm mb-16">Crea tu nueva contraseña.</p>
+    <div class="form-group">
+      <label class="form-label">Nueva contraseña</label>
+      <input type="password" id="resetPassword" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirmar contraseña</label>
+      <input type="password" id="resetPasswordConfirm" class="form-control" placeholder="Repite tu contraseña" required>
+    </div>
+    <div id="resetMsg" class="alert hidden"></div>
+    <button type="submit" class="btn btn-primary btn-full" id="resetBtn">Guardar Nueva Contraseña</button>
+  </form>
 </div>
 
 <div id="toast-container"></div>

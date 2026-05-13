@@ -9,19 +9,23 @@ const tabRegister = document.getElementById('tab-register')
 const loginForm   = document.getElementById('loginForm')
 const registerForm= document.getElementById('registerForm')
 const forgotForm  = document.getElementById('forgotForm')
+const resetForm   = document.getElementById('resetForm')
 const forgotLink  = document.getElementById('forgotLink')
 const backToLogin = document.getElementById('backToLogin')
+const authTabs    = document.querySelector('.auth-tabs')
 
 function showTab(tab) {
   loginForm.classList.add('hidden')
   registerForm.classList.add('hidden')
   forgotForm.classList.add('hidden')
+  resetForm.classList.add('hidden')
   tabLogin.classList.remove('active')
   tabRegister.classList.remove('active')
 
   if (tab === 'login')    { loginForm.classList.remove('hidden');    tabLogin.classList.add('active'); }
   if (tab === 'register') { registerForm.classList.remove('hidden'); tabRegister.classList.add('active'); }
   if (tab === 'forgot')   { forgotForm.classList.remove('hidden'); }
+  if (tab === 'reset')    { resetForm.classList.remove('hidden'); authTabs.classList.add('hidden'); }
 }
 
 tabLogin.addEventListener('click',    () => showTab('login'))
@@ -30,6 +34,20 @@ forgotLink?.addEventListener('click', (e) => { e.preventDefault(); showTab('forg
 backToLogin?.addEventListener('click', () => showTab('login'))
 
 if (params.get('mode') === 'register') showTab('register')
+
+// ─── Handle Supabase email callback (confirm signup / password recovery) ──────
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    showTab('reset')
+    return
+  }
+  if (event === 'SIGNED_IN' && session) {
+    // Came from email confirmation link → go to profile
+    if (window.location.hash.includes('access_token')) {
+      window.location.href = 'profile.html'
+    }
+  }
+})
 
 // ─── Login ───────────────────────────────────────────────────────
 loginForm.addEventListener('submit', async (e) => {
@@ -130,8 +148,45 @@ forgotForm.addEventListener('submit', async (e) => {
   }
 })
 
-// ─── Redirect if already logged in ───────────────────────────────
+// ─── Reset Password (after clicking email link) ───────────────────
+resetForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const btn     = document.getElementById('resetBtn')
+  const msg     = document.getElementById('resetMsg')
+  const password = document.getElementById('resetPassword').value
+  const confirm  = document.getElementById('resetPasswordConfirm').value
+
+  msg.classList.remove('hidden', 'alert-error', 'alert-success')
+
+  if (password !== confirm) {
+    msg.textContent = 'Las contraseñas no coinciden.'
+    msg.classList.add('alert-error')
+    return
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Guardando...'
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    msg.textContent = error.message
+    msg.classList.add('alert-error')
+    btn.disabled = false
+    btn.textContent = 'Guardar Nueva Contraseña'
+    return
+  }
+
+  msg.textContent = '¡Contraseña actualizada! Redirigiendo al login...'
+  msg.classList.add('alert-success')
+
+  await supabase.auth.signOut()
+  setTimeout(() => { window.location.href = 'auth.html' }, 2000)
+})
+
+// ─── Redirect if already logged in (not during email callback) ────
 ;(async () => {
+  if (window.location.hash.includes('access_token')) return
   const { data: { session } } = await supabase.auth.getSession()
   if (session) window.location.href = 'profile.html'
 })()
