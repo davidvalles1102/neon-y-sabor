@@ -11,15 +11,31 @@ async function init() {
   }
 
   profile = await getProfile(session.user.id)
-  document.getElementById('profileContent')?.classList.remove('hidden')
 
+  // Auto-create profile if trigger didn't fire (e.g. registered before trigger existed)
+  if (!profile) {
+    const meta = session.user.user_metadata ?? {}
+    const { data } = await supabase.from('profiles').upsert({
+      id:        session.user.id,
+      full_name: meta.full_name || '',
+      phone:     meta.phone     || '',
+      role:      'customer',
+      loyalty_points: 0
+    }, { onConflict: 'id' }).select().maybeSingle()
+    profile = data ?? { id: session.user.id, full_name: meta.full_name || '', phone: meta.phone || '', loyalty_points: 0 }
+  }
+
+  // Store email from session (not in profiles table)
+  profile._email = session.user.email
+
+  document.getElementById('profileContent')?.classList.remove('hidden')
   renderProfile()
   await Promise.all([loadStats(), loadReservations(), loadLoyalty()])
 }
 
 function renderProfile() {
   document.getElementById('profileName').textContent  = profile.full_name || 'Sin nombre'
-  document.getElementById('profileEmail').textContent = profile.id        // email from auth
+  document.getElementById('profileEmail').textContent = profile._email || ''
   document.getElementById('loyaltyPoints').textContent = profile.loyalty_points ?? 0
   document.getElementById('loyaltyValue').textContent  = ((profile.loyalty_points ?? 0) * 0.01).toFixed(2)
 
@@ -36,11 +52,11 @@ async function loadStats() {
     .from('orders')
     .select('total')
     .eq('customer_id', profile.id)
-    .eq('status', 'paid')
+    .in('status', ['paid', 'delivered'])
 
   document.getElementById('totalVisits').textContent  = data?.length ?? 0
   const spent = data?.reduce((s, o) => s + (+o.total), 0) ?? 0
-  document.getElementById('totalSpent').textContent   = `$${spent.toFixed(2)}`
+  document.getElementById('totalSpent').textContent   = fmt.currency(spent)
 }
 
 async function loadReservations() {
