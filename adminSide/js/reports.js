@@ -23,7 +23,7 @@ async function loadAll() {
 
   const [{ data: orders }, { data: payments }, { data: orderItems }] = await Promise.all([
     supabase.from('orders').select('*, restaurant_tables(number), profiles!orders_waiter_id_fkey(full_name)')
-      .eq('status', 'paid').gte('created_at', since).order('created_at'),
+      .in('status', ['paid', 'delivered']).gte('created_at', since).order('created_at'),
     supabase.from('payments').select('*').gte('created_at', since),
     supabase.from('order_items').select('*, menu_items(name, category_id, categories(name))')
       .gte('created_at', since)
@@ -31,7 +31,7 @@ async function loadAll() {
 
   renderKPIs(orders, payments)
   renderDailySalesChart(orders)
-  renderPaymentPieChart(payments)
+  renderPaymentPieChart(payments, orders)
   renderCategoryChart(orderItems)
   renderTopItems(orderItems)
   renderOrdersTable(orders)
@@ -41,7 +41,8 @@ async function loadAll() {
 }
 
 function renderKPIs(orders, payments) {
-  const revenue = payments?.reduce((s, p) => s + +p.amount, 0) ?? 0
+  // Use order totals so delivery/takeout revenue is included (payments table = dine-in only)
+  const revenue = orders?.reduce((s, o) => s + +o.total, 0) ?? 0
   const customers = new Set(orders?.map(o => o.customer_id).filter(Boolean)).size
   const avg     = orders?.length ? revenue / orders.length : 0
 
@@ -81,9 +82,15 @@ function renderDailySalesChart(orders) {
   })
 }
 
-function renderPaymentPieChart(payments) {
+function renderPaymentPieChart(payments, orders) {
+  // Dine-in: use payments table; delivery/takeout: use order.payment_method + order.total
   const byMethod = {}
   payments?.forEach(p => { byMethod[p.method] = (byMethod[p.method] || 0) + +p.amount })
+  orders?.filter(o => ['delivery', 'takeout'].includes(o.order_type))
+         .forEach(o => {
+           const m = o.payment_method || 'cash'
+           byMethod[m] = (byMethod[m] || 0) + +o.total
+         })
   const labels = Object.keys(byMethod)
   const values = labels.map(m => byMethod[m])
 
@@ -168,22 +175,35 @@ function renderOrdersTable(orders) {
     return
   }
 
-  tbody.innerHTML = orders.map(o => `
+  tbody.innerHTML = orders.map(o => {
+    const typeLabel = o.order_type === 'delivery' ? '🛵 Domicilio'
+                    : o.order_type === 'takeout'  ? '🥡 Para Llevar'
+                    : `🍽 Mesa ${o.restaurant_tables?.number ?? '—'}`
+    const who = o.order_type === 'dine-in'
+      ? (o.profiles?.full_name ?? '—')
+      : (o.delivery_name ?? '—')
+    return `
     <tr>
       <td>${fmt.datetime(o.created_at)}</td>
-      <td>Mesa ${o.restaurant_tables?.number ?? '—'}</td>
-      <td>${o.profiles?.full_name ?? '—'}</td>
-      <td>—</td>
+      <td>${typeLabel}</td>
+      <td>${who}</td>
+      <td>${o.delivery_phone ?? '—'}</td>
       <td class="neon-amber" style="font-weight:700">${fmt.currency(o.total)}</td>
       <td><span class="badge ${statusCls[o.status] ?? 'badge-muted'}">${o.status}</span></td>
-    </tr>
-  `).join('')
+    </tr>`
+  }).join('')
 }
 
 function exportSalesCSV() {
   const orders = window._exportOrders || []
-  const rows = [['Fecha', 'Mesa', 'Mesero', 'Subtotal', 'IVA', 'Total', 'Estado']]
-  orders.forEach(o => rows.push([fmt.datetime(o.created_at), `Mesa ${o.restaurant_tables?.number ?? ''}`, o.profiles?.full_name ?? '', o.subtotal, o.tax, o.total, o.status]))
+  const rows = [['Fecha', 'Tipo', 'Cliente', 'Teléfono', 'Subtotal', 'IVA', 'Total', 'Pago', 'Estado']]
+  orders.forEach(o => {
+    const typeLabel = o.order_type === 'delivery' ? 'Domicilio'
+                    : o.order_type === 'takeout'  ? 'Para Llevar'
+                    : `Mesa ${o.restaurant_tables?.number ?? ''}`
+    const who = o.order_type === 'dine-in' ? (o.profiles?.full_name ?? '') : (o.delivery_name ?? '')
+    rows.push([fmt.datetime(o.created_at), typeLabel, who, o.delivery_phone ?? '', o.subtotal, o.tax, o.total, o.payment_method ?? '', o.status])
+  })
   downloadCSV(rows, `ventas-${days}d.csv`)
 }
 
