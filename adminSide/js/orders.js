@@ -50,13 +50,24 @@ function setupOrderTypeTabs() {
 async function loadTables() {
   const { data } = await supabase.from('restaurant_tables').select('*').order('number')
   tables = data || []
+  renderTablePicker()
+}
+
+function renderTablePicker() {
   const sel = document.getElementById('tablePicker')
+  const currentVal = sel.value
+  sel.innerHTML = '<option value="">Seleccionar...</option>'
   tables.forEach(t => {
     const opt = document.createElement('option')
     opt.value = t.id
-    opt.textContent = `Mesa ${t.number} (${t.location}) — ${t.status}`
+    const statusSuffix = t.status === 'occupied'    ? ' — 🔴 Ocupada'
+                       : t.status === 'reserved'    ? ' — 🟡 Reservada'
+                       : t.status === 'maintenance' ? ' — ⛔ Mantenimiento'
+                       : ''
+    opt.textContent = `Mesa ${t.number} (${t.location})${statusSuffix}`
     sel.appendChild(opt)
   })
+  if (currentVal) sel.value = currentVal
 }
 
 // ─── Menu ─────────────────────────────────────────────────────────
@@ -160,6 +171,7 @@ async function loadOrCreateOrder(forceNew = false) {
 
     if (data?.length) {
       currentOrder = { id: data[0].id, table_id: selectedTable.id, items: mapItems(data[0].order_items) }
+      await markTableOccupied(selectedTable.id)
       renderTicket()
       return
     }
@@ -182,9 +194,19 @@ async function loadOrCreateOrder(forceNew = false) {
 
   if (error) { toast('Error al crear orden', 'error'); return }
   currentOrder = { id: data.id, table_id: selectedTable?.id ?? null, items: [] }
+  if (orderType === 'dine_in' && selectedTable) await markTableOccupied(selectedTable.id)
   renderTicket()
   const toastMsg = orderType === 'dine_in' ? `Orden nueva — Mesa ${selectedTable.number}` : orderType === 'takeout' ? 'Orden Para Llevar creada' : 'Orden Domicilio creada'
   toast(toastMsg)
+}
+
+async function markTableOccupied(tableId) {
+  const t = tables.find(x => x.id === tableId)
+  if (!t || t.status === 'occupied') return
+  await supabase.from('restaurant_tables').update({ status: 'occupied' }).eq('id', tableId)
+  t.status = 'occupied'
+  renderTablePicker()
+  document.getElementById('tablePicker').value = tableId
 }
 
 function mapItems(rawItems) {
@@ -390,6 +412,8 @@ async function processPayment() {
   await supabase.from('orders').update({ status: 'paid' }).eq('id', currentOrder.id)
   if (orderType === 'dine_in' && selectedTable) {
     await supabase.from('restaurant_tables').update({ status: 'available' }).eq('id', selectedTable.id)
+    const t = tables.find(x => x.id === selectedTable.id)
+    if (t) t.status = 'available'
   }
 
   // Award loyalty points (1 pt per $1 spent)
@@ -407,6 +431,7 @@ async function processPayment() {
   selectedTable = null
   linkedCustomer= null
   document.getElementById('tablePicker').value = ''
+  renderTablePicker()
   renderTicket()
   btn.disabled = false
 }
