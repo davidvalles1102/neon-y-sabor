@@ -77,6 +77,14 @@ export async function initAdminShell(allowedRoles = ['admin', 'waiter', 'kitchen
     }
 
     const profile = await getProfile(data.user.id)
+    if (!profile) {
+      await supabase.auth.signOut()
+      err.textContent = 'Perfil de usuario no encontrado. Contacta al administrador.'
+      err.classList.remove('hidden')
+      btn.disabled = false
+      btn.textContent = 'Ingresar al Panel'
+      return
+    }
     if (!['admin', 'waiter', 'kitchen'].includes(profile.role)) {
       await supabase.auth.signOut()
       err.textContent = 'No tienes permiso para acceder al panel.'
