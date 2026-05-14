@@ -72,13 +72,17 @@ function renderGrid() {
     return
   }
 
-  grid.innerHTML = filtered.map(item => `
+  grid.innerHTML = filtered.map(item => {
+    const icon = item.categories?.icon ?? '🍽️'
+    const imgHtml = item.image_url
+      ? `<img class="order-item-img" src="${item.image_url}" alt="${item.name}" loading="lazy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+         <div class="order-item-img" style="display:none">${icon}</div>`
+      : `<div class="order-item-img">${icon}</div>`
+    return `
     <div class="order-item-card ${!item.available ? 'order-item-card--unavail' : ''}"
          data-id="${item.id}" data-name="${item.name}" data-price="${item.price}">
-      ${item.image_url
-        ? `<img class="order-item-img" src="${item.image_url}" alt="${item.name}" loading="lazy">`
-        : `<div class="order-item-img">${item.categories?.icon ?? '🍽️'}</div>`
-      }
+      ${imgHtml}
       <div class="order-item-body">
         <div class="order-item-name">${item.name}</div>
         ${item.description ? `<div class="order-item-desc">${item.description}</div>` : ''}
@@ -88,7 +92,7 @@ function renderGrid() {
         </div>
       </div>
     </div>
-  `).join('')
+  `}).join('')
 
   grid.querySelectorAll('.order-item-card').forEach(card => {
     card.addEventListener('click', () => addToCart({
