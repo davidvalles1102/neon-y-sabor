@@ -52,34 +52,34 @@ function setupModal() {
   })
 
   document.getElementById('downloadQrBtn').addEventListener('click', () => {
-    if (!activeQR?.dataUrl) return
+    if (!activeQR) return
+    const canvas = document.querySelector('#qrContainer canvas')
+    if (!canvas) return
     const a = document.createElement('a')
-    a.href = activeQR.dataUrl
+    a.href = canvas.toDataURL('image/png')
     a.download = `mesa-${activeQR.number}-qr.png`
     a.click()
   })
 }
 
-window.showQR = async (id, number) => {
-  activeQR = { id, number, dataUrl: null }
+window.showQR = (id, number) => {
+  activeQR = { id, number }
   const url = `${location.origin}/customerSide/table-order.html?table=${id}`
 
   document.getElementById('qrModalTitle').textContent = `QR — Mesa ${number}`
   document.getElementById('qrUrl').textContent = url
   document.getElementById('qrModal').classList.remove('hidden')
 
-  try {
-    const dataUrl = await QRCode.toDataURL(url, {
-      width: 256,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' }
-    })
-    document.getElementById('qrImg').src = dataUrl
-    activeQR.dataUrl = dataUrl
-  } catch (err) {
-    console.error('QR generation error:', err)
-    toast('Error al generar código QR', 'error')
-  }
+  const container = document.getElementById('qrContainer')
+  container.innerHTML = ''
+  new QRCode(container, {
+    text: url,
+    width: 256,
+    height: 256,
+    colorDark:  '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  })
 }
 
 window.toggleMaintenance = async (id, currentStatus) => {
