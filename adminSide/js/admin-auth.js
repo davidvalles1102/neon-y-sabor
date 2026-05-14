@@ -97,13 +97,15 @@ export async function initAdminShell(allowedRoles = ['admin', 'waiter', 'kitchen
   })
 
   // THEN check for existing session (after listener is already attached)
+  // Timeout of 4s so the button never stays stuck on slow networks
   btn.disabled = true
   btn.textContent = 'Cargando...'
 
   try {
-    const session = await getSession()
+    const timeout  = new Promise(resolve => setTimeout(() => resolve(null), 4000))
+    const session  = await Promise.race([getSession(), timeout])
     if (session) {
-      const p = await getProfile(session.user.id)
+      const p = await Promise.race([getProfile(session.user.id), timeout])
       if (!['admin', 'waiter', 'kitchen'].includes(p?.role)) {
         await supabase.auth.signOut()
         window.location.reload()
