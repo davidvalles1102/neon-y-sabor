@@ -119,7 +119,8 @@
       <button class="modal-close" id="qrModalClose">✕</button>
     </div>
     <div class="modal-body qr-body">
-      <canvas id="qrCanvas" width="256" height="256"></canvas>
+      <img id="qrImg" width="256" height="256" alt="QR Code"
+           style="border-radius:var(--r-md);border:6px solid #fff;display:block;background:#fff">
       <p class="qr-url" id="qrUrl"></p>
       <button class="btn btn-primary btn-full" id="downloadQrBtn">⬇ Descargar PNG</button>
     </div>
