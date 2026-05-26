@@ -238,8 +238,7 @@ function confirmWhatsApp() {
     doc.save(`recibo-${lastPaymentData.receipt_number}.pdf`)
     toast('PDF descargado — adjúntalo en WhatsApp 📎', 'success')
   }
-  const text = encodeURIComponent(buildWhatsAppText(lastPaymentData))
-  window.open(`https://wa.me/${raw}?text=${text}`, '_blank')
+  window.open(`https://wa.me/${raw}`, '_blank')
   document.getElementById('waModal').classList.add('hidden')
 }
 
