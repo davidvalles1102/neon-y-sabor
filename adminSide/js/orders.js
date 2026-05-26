@@ -494,6 +494,114 @@ function renderReceipt(receiptNo, change) {
   document.getElementById('receiptModal').classList.remove('hidden')
 }
 
+// ─── PDF Receipt ──────────────────────────────────────────────────
+function buildReceiptPDF(data) {
+  if (!window.jspdf) return null
+  const { jsPDF } = window.jspdf
+
+  // Dynamic height based on number of items (with text-wrap estimate)
+  const itemsH = data.items.reduce((h, i) => h + Math.ceil(i.name.length / 26) * 5.2, 0)
+  const pageH  = Math.max(170, 118 + itemsH)
+
+  const doc = new jsPDF({ unit: 'mm', format: [80, pageH] })
+  const W = 80
+  let y = 0
+
+  // ── helpers ──────────────────────────────────────────────────
+  const fnt = (size, style = 'normal', r = 30, g = 30, b = 30) => {
+    doc.setFontSize(size); doc.setFont('helvetica', style); doc.setTextColor(r, g, b)
+  }
+  const ctr = (text, size, bold = false) => {
+    fnt(size, bold ? 'bold' : 'normal')
+    doc.text(text, W / 2, y, { align: 'center' })
+    y += size * 0.35 + 1.5
+  }
+  const hr = (light = false) => {
+    doc.setDrawColor(light ? 220 : 170, light ? 220 : 170, light ? 220 : 170)
+    doc.line(5, y, W - 5, y); y += 4
+  }
+  const row2 = (left, right, size = 8.5, bold = false) => {
+    fnt(size, bold ? 'bold' : 'normal', bold ? 20 : 60, bold ? 20 : 60, bold ? 20 : 60)
+    doc.text(String(left),  5,     y)
+    doc.text(String(right), W - 5, y, { align: 'right' })
+    y += size * 0.38 + 1.5
+  }
+
+  // ── Top green bar ─────────────────────────────────────────────
+  doc.setFillColor(37, 211, 102)
+  doc.rect(0, 0, W, 3.5, 'F')
+  y = 11
+
+  // ── Restaurant name ───────────────────────────────────────────
+  fnt(15, 'bold', 20, 20, 20)
+  ctr('NEÓN Y SABOR', 15, true)
+  fnt(8.5, 'normal', 100, 100, 100)
+  ctr('MI RANCHO', 8.5)
+  y += 1; hr()
+
+  // ── Meta ──────────────────────────────────────────────────────
+  const locLabel = data.orderType === 'dine_in'
+    ? `Mesa ${data.tableNum ?? '—'}`
+    : data.orderType === 'takeout' ? 'Para Llevar' : 'Domicilio'
+  row2('Recibo:',  data.receiptNo,           8)
+  row2('Fecha:',   fmt.datetime(data.date),  8)
+  row2('Pedido:',  locLabel,                 8)
+  y += 1; hr()
+
+  // ── Items ─────────────────────────────────────────────────────
+  fnt(7.5, 'bold', 90, 90, 90)
+  doc.text('DESCRIPCIÓN', 5, y)
+  doc.text('VALOR',       W - 5, y, { align: 'right' })
+  y += 5; hr(true)
+
+  data.items.forEach(item => {
+    const label = `${item.qty}× ${item.name}`
+    const price = fmt.currency(item.price * item.qty)
+    fnt(8.5, 'normal', 30, 30, 30)
+    const lines = doc.splitTextToSize(label, 50)
+    lines.forEach((ln, idx) => {
+      doc.text(ln, idx === 0 ? 5 : 8, y)
+      if (idx === 0) { fnt(8.5, 'bold', 30, 30, 30); doc.text(price, W - 5, y, { align: 'right' }) }
+      y += 5
+    })
+  })
+  y += 1; hr()
+
+  // ── Totals ────────────────────────────────────────────────────
+  row2('Subtotal', fmt.currency(data.subtotal), 8.5)
+  row2('IVA (8%)', fmt.currency(data.tax),      8.5)
+  y += 1
+  doc.setFillColor(245, 245, 245); doc.rect(3, y - 3.5, W - 6, 9.5, 'F')
+  row2('TOTAL', fmt.currency(data.total), 12, true)
+  y += 2; hr()
+
+  // ── Payment ───────────────────────────────────────────────────
+  const mLabel = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', points: 'Puntos' }
+  row2('Método de pago:', mLabel[data.method] ?? data.method, 8.5)
+  if (data.method === 'cash' && data.change > 0) {
+    row2('Efectivo recibido:', fmt.currency(data.cashIn), 8)
+    row2('Cambio:',            fmt.currency(data.change), 8)
+  }
+  hr()
+
+  // ── Footer ────────────────────────────────────────────────────
+  y += 2
+  fnt(10, 'bold', 30, 30, 30); ctr('¡Gracias por su visita!', 10, true)
+  fnt(7.5, 'normal', 150, 150, 150); ctr('neon-y-sabor.vercel.app', 7.5)
+
+  // ── Bottom green bar ──────────────────────────────────────────
+  doc.setFillColor(37, 211, 102)
+  doc.rect(0, pageH - 3.5, W, 3.5, 'F')
+
+  return doc
+}
+
+window.downloadPDF = function () {
+  if (!lastReceiptData) return
+  const doc = buildReceiptPDF(lastReceiptData)
+  if (doc) doc.save(`recibo-${lastReceiptData.receiptNo}.pdf`)
+}
+
 // ─── WhatsApp ─────────────────────────────────────────────────────
 function openWhatsAppModal() {
   if (!lastReceiptData) return
@@ -541,13 +649,20 @@ function confirmWhatsApp() {
     document.getElementById('waPhone').focus()
     return
   }
+  // Generar y descargar PDF automáticamente
+  const doc = buildReceiptPDF(lastReceiptData)
+  if (doc) {
+    doc.save(`recibo-${lastReceiptData.receiptNo}.pdf`)
+    toast('PDF descargado — adjúntalo en WhatsApp 📎', 'success')
+  }
   const text = encodeURIComponent(buildWhatsAppText(lastReceiptData))
   window.open(`https://wa.me/${raw}?text=${text}`, '_blank')
   document.getElementById('waModal').classList.add('hidden')
 }
 
 // Expose for inline onclick
-window.changeQty       = changeQty
+window.changeQty         = changeQty
 window.openWhatsAppModal = openWhatsAppModal
+window.downloadPDF       = window.downloadPDF  // already set above
 
 init()

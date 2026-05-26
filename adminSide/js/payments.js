@@ -29,7 +29,7 @@ async function init() {
 async function loadPayments() {
   const { data, error } = await supabase
     .from('payments')
-    .select('*, orders(*, restaurant_tables(number)), profiles!payments_processed_by_fkey(full_name)')
+    .select('*, orders(*, restaurant_tables(number), order_items(*)), profiles!payments_processed_by_fkey(full_name)')
     .gte('created_at', `${filterDate}T00:00:00`)
     .lte('created_at', `${filterDate}T23:59:59`)
     .order('created_at', { ascending: false })
@@ -102,6 +102,100 @@ window.showReceipt = (payId) => {
   document.getElementById('receiptModal').classList.remove('hidden')
 }
 
+// ─── PDF Receipt ──────────────────────────────────────────────────
+function buildPaymentPDF(p) {
+  if (!window.jspdf) return null
+  const { jsPDF } = window.jspdf
+
+  const orderItems = p.orders?.order_items ?? []
+  const itemsH = orderItems.reduce((h, i) => h + Math.ceil((i.item_name || '').length / 26) * 5.2, 0)
+  const pageH  = Math.max(170, 118 + itemsH)
+
+  const doc = new jsPDF({ unit: 'mm', format: [80, pageH] })
+  const W = 80
+  let y = 0
+
+  const fnt = (size, style = 'normal', r = 30, g = 30, b = 30) => {
+    doc.setFontSize(size); doc.setFont('helvetica', style); doc.setTextColor(r, g, b)
+  }
+  const ctr = (text, size, bold = false) => {
+    fnt(size, bold ? 'bold' : 'normal')
+    doc.text(text, W / 2, y, { align: 'center' })
+    y += size * 0.35 + 1.5
+  }
+  const hr = (light = false) => {
+    doc.setDrawColor(light ? 220 : 170, light ? 220 : 170, light ? 220 : 170)
+    doc.line(5, y, W - 5, y); y += 4
+  }
+  const row2 = (left, right, size = 8.5, bold = false) => {
+    fnt(size, bold ? 'bold' : 'normal', bold ? 20 : 60, bold ? 20 : 60, bold ? 20 : 60)
+    doc.text(String(left),  5,     y)
+    doc.text(String(right), W - 5, y, { align: 'right' })
+    y += size * 0.38 + 1.5
+  }
+
+  // Top bar
+  doc.setFillColor(37, 211, 102); doc.rect(0, 0, W, 3.5, 'F')
+  y = 11
+
+  // Header
+  fnt(15, 'bold', 20, 20, 20); ctr('NEÓN Y SABOR', 15, true)
+  fnt(8.5, 'normal', 100, 100, 100); ctr('MI RANCHO', 8.5)
+  y += 1; hr()
+
+  // Meta
+  row2('Recibo:', p.receipt_number, 8)
+  row2('Fecha:',  fmt.datetime(p.created_at), 8)
+  row2('Mesa:',   p.orders?.restaurant_tables?.number ? `Mesa ${p.orders.restaurant_tables.number}` : '—', 8)
+  row2('Cajero:', p.profiles?.full_name ?? '—', 8)
+  y += 1; hr()
+
+  // Items (if available)
+  if (orderItems.length) {
+    fnt(7.5, 'bold', 90, 90, 90)
+    doc.text('DESCRIPCIÓN', 5, y); doc.text('VALOR', W - 5, y, { align: 'right' })
+    y += 5; hr(true)
+    orderItems.forEach(item => {
+      const label = `${item.quantity}× ${item.item_name}`
+      const price = fmt.currency(item.item_price * item.quantity)
+      fnt(8.5, 'normal', 30, 30, 30)
+      const lines = doc.splitTextToSize(label, 50)
+      lines.forEach((ln, idx) => {
+        doc.text(ln, idx === 0 ? 5 : 8, y)
+        if (idx === 0) { fnt(8.5, 'bold', 30, 30, 30); doc.text(price, W - 5, y, { align: 'right' }) }
+        y += 5
+      })
+    })
+    y += 1; hr()
+  }
+
+  // Total
+  y += 1
+  doc.setFillColor(245, 245, 245); doc.rect(3, y - 3.5, W - 6, 9.5, 'F')
+  row2('TOTAL', fmt.currency(p.amount), 12, true)
+  y += 2; hr()
+
+  // Payment
+  const mLabel = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', points: 'Puntos' }
+  row2('Método de pago:', mLabel[p.method] ?? p.method, 8.5)
+  if (p.change_amount > 0) row2('Cambio:', fmt.currency(p.change_amount), 8)
+  hr()
+
+  // Footer
+  y += 2
+  fnt(10, 'bold', 30, 30, 30); ctr('¡Gracias por su visita!', 10, true)
+  fnt(7.5, 'normal', 150, 150, 150); ctr('neon-y-sabor.vercel.app', 7.5)
+
+  doc.setFillColor(37, 211, 102); doc.rect(0, pageH - 3.5, W, 3.5, 'F')
+  return doc
+}
+
+window.downloadPDF = function () {
+  if (!lastPaymentData) return
+  const doc = buildPaymentPDF(lastPaymentData)
+  if (doc) doc.save(`recibo-${lastPaymentData.receipt_number}.pdf`)
+}
+
 // ─── WhatsApp ─────────────────────────────────────────────────────
 window.openWhatsAppModal = function () {
   if (!lastPaymentData) return
@@ -113,17 +207,22 @@ window.openWhatsAppModal = function () {
 function buildWhatsAppText(p) {
   const methodLabels = { cash: 'Efectivo 💵', card: 'Tarjeta 💳', transfer: 'Transferencia 📲', points: 'Puntos ⭐' }
   const changeLine = p.change_amount > 0 ? `\nCambio: ${fmt.currency(p.change_amount)}` : ''
+  const orderItems = p.orders?.order_items ?? []
+  const itemLines = orderItems.length
+    ? orderItems.map(i => `${i.quantity}x ${i.item_name}  ${fmt.currency(i.item_price * i.quantity)}`).join('\n') + '\n─────────────────────'
+    : ''
   return [
     `🍽️ *Neón y Sabor Mi Rancho*`,
     `Recibo: ${p.receipt_number}`,
     `📅 ${fmt.datetime(p.created_at)}`,
     `Mesa: ${p.orders?.restaurant_tables?.number ?? '—'}`,
     `─────────────────────`,
+    itemLines,
     `*TOTAL: ${fmt.currency(p.amount)}*`,
     `Método: ${methodLabels[p.method] ?? p.method}${changeLine}`,
     `─────────────────────`,
     `¡Gracias por su visita! 🌟`
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 function confirmWhatsApp() {
@@ -132,6 +231,12 @@ function confirmWhatsApp() {
     toast('Ingresa un número de WhatsApp', 'warning')
     document.getElementById('waPhone').focus()
     return
+  }
+  // Generar y descargar PDF
+  const doc = buildPaymentPDF(lastPaymentData)
+  if (doc) {
+    doc.save(`recibo-${lastPaymentData.receipt_number}.pdf`)
+    toast('PDF descargado — adjúntalo en WhatsApp 📎', 'success')
   }
   const text = encodeURIComponent(buildWhatsAppText(lastPaymentData))
   window.open(`https://wa.me/${raw}?text=${text}`, '_blank')
