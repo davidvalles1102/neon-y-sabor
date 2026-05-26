@@ -64,6 +64,10 @@ WHERE name = 'Tilapia ahumada';
 UPDATE menu_items SET image_url = 'https://neon-y-sabor.vercel.app/customerSide/images/menu/cachama-sudada-almuerzo-corriente.png'
 WHERE name = 'Pescado de río';
 
+-- Bandeja paisa mini
+UPDATE menu_items SET image_url = 'https://neon-y-sabor.vercel.app/customerSide/images/menu/bandeja-paisa-mini.jpeg'
+WHERE name = 'Bandeja paisa mini';
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- IMÁGENES SIN COINCIDENCIA EXACTA EN EL MENÚ (disponibles para asignar):
 -- carne-a-la-plancha.png
