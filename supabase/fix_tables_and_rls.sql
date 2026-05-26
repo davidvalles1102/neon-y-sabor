@@ -24,7 +24,6 @@ ORDER BY rt.number;
 
 
 -- ─── PASO 2: Limpiar mesas ocupadas sin orden activa ───────────────
--- Esto libera las mesas 2 y 3 para que el admin pueda crear órdenes nuevas
 -- ⚠️  Solo ejecutar si el PASO 1 confirma que esas mesas no tienen orden
 UPDATE restaurant_tables
 SET status = 'available'
@@ -38,35 +37,41 @@ WHERE status = 'occupied'
 
 
 -- ─── PASO 3: Políticas RLS para que clientes puedan pedir desde QR ─
--- Sin estas políticas, table-order.html falla silenciosamente
+-- DROP primero para evitar error si ya existen, luego CREATE
 
--- 3a. Clientes pueden leer su propia mesa (necesario para cargar la página)
-CREATE POLICY IF NOT EXISTS "tables_customer_read"
+DROP POLICY IF EXISTS "tables_customer_read"           ON public.restaurant_tables;
+DROP POLICY IF EXISTS "tables_customer_mark_occupied"  ON public.restaurant_tables;
+DROP POLICY IF EXISTS "orders_customer_insert"         ON public.orders;
+DROP POLICY IF EXISTS "orders_customer_own"            ON public.orders;
+DROP POLICY IF EXISTS "order_items_customer_insert"    ON public.order_items;
+
+-- 3a. Clientes pueden leer las mesas (necesario para cargar table-order.html)
+CREATE POLICY "tables_customer_read"
   ON public.restaurant_tables FOR SELECT
   TO authenticated
   USING (true);
 
 -- 3b. Clientes pueden marcar mesa como ocupada al escanear QR
-CREATE POLICY IF NOT EXISTS "tables_customer_mark_occupied"
+CREATE POLICY "tables_customer_mark_occupied"
   ON public.restaurant_tables FOR UPDATE
   TO authenticated
   USING (true)
   WITH CHECK (status = 'occupied');
 
--- 3c. Clientes pueden crear órdenes (INSERT)
-CREATE POLICY IF NOT EXISTS "orders_customer_insert"
+-- 3c. Clientes pueden crear órdenes
+CREATE POLICY "orders_customer_insert"
   ON public.orders FOR INSERT
   TO authenticated
   WITH CHECK (customer_id = auth.uid());
 
 -- 3d. Clientes pueden ver sus propias órdenes
-CREATE POLICY IF NOT EXISTS "orders_customer_own"
+CREATE POLICY "orders_customer_own"
   ON public.orders FOR SELECT
   TO authenticated
   USING (customer_id = auth.uid());
 
 -- 3e. Clientes pueden agregar items a sus propias órdenes
-CREATE POLICY IF NOT EXISTS "order_items_customer_insert"
+CREATE POLICY "order_items_customer_insert"
   ON public.order_items FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -76,6 +81,7 @@ CREATE POLICY IF NOT EXISTS "order_items_customer_insert"
         AND o.customer_id = auth.uid()
     )
   );
+
 
 -- ─── PASO 4: Verificar resultado ────────────────────────────────────
 SELECT number, status FROM restaurant_tables ORDER BY number;
