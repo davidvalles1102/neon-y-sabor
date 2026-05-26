@@ -167,17 +167,42 @@ function renderHistory(orders) {
     const totalQty  = items.reduce((s, i) => s + i.quantity, 0)
     const time      = new Date(o.updated_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })
 
+    const detailItems = items.map(i => `
+      <div class="history-detail-item">
+        <span class="history-detail-item__qty">${i.quantity}×</span>
+        <span>${i.item_name}</span>
+      </div>`).join('')
+
+    const noteHtml = o.notes
+      ? `<div class="history-detail-note">📋 ${o.notes}</div>`
+      : ''
+
     return `
-      <div class="history-row">
-        <div class="history-row__label">${label}</div>
-        <div class="history-row__items">${itemsText || '—'}</div>
-        <span class="history-row__count">${totalQty} items</span>
-        <div class="history-row__time">${time}</div>
+      <div class="history-row" id="hrow-${o.id}" onclick="toggleHistoryRow('${o.id}')">
+        <div class="history-row__summary">
+          <div class="history-row__label">${label}</div>
+          <div class="history-row__items">${itemsText || '—'}</div>
+          <span class="history-row__count">${totalQty} items</span>
+          <div class="history-row__time">${time}</div>
+          <span class="history-row__chevron">▼</span>
+        </div>
+        <div class="history-row__detail" id="hdetail-${o.id}">
+          <div class="history-detail-grid">${detailItems}</div>
+          ${noteHtml}
+        </div>
       </div>`
   }).join('')
 }
 
-// Toggle colapsar / expandir
+window.toggleHistoryRow = function(orderId) {
+  const row    = document.getElementById(`hrow-${orderId}`)
+  const detail = document.getElementById(`hdetail-${orderId}`)
+  if (!row || !detail) return
+  const isOpen = detail.classList.toggle('open')
+  row.classList.toggle('open', isOpen)
+}
+
+// Toggle colapsar / expandir sección completa
 document.getElementById('historyToggle').addEventListener('click', () => {
   historyCollapsed = !historyCollapsed
   document.getElementById('historyBody').classList.toggle('collapsed', historyCollapsed)

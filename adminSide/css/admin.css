@@ -560,14 +560,22 @@
 
 .history-row {
   display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+  font-size: .87rem;
+  cursor: pointer;
+}
+.history-row:last-child { border-bottom: none; }
+
+.history-row__summary {
+  display: flex;
   align-items: center;
   gap: 12px;
   padding: 11px 20px;
-  border-bottom: 1px solid var(--border);
-  font-size: .87rem;
+  transition: background var(--t);
 }
-.history-row:last-child { border-bottom: none; }
-.history-row:hover { background: var(--bg-3); }
+.history-row:hover .history-row__summary { background: var(--bg-3); }
+.history-row.open  .history-row__summary { background: var(--bg-3); }
 
 .history-row__label {
   font-weight: 600;
@@ -599,6 +607,54 @@
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
+}
+.history-row__chevron {
+  color: var(--text-muted);
+  font-size: .75rem;
+  flex-shrink: 0;
+  transition: transform var(--t);
+}
+.history-row.open .history-row__chevron { transform: rotate(180deg); }
+
+/* Detail panel (expandido) */
+.history-row__detail {
+  display: none;
+  padding: 12px 20px 16px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+}
+.history-row__detail.open { display: block; }
+
+.history-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 4px 24px;
+  margin-bottom: 4px;
+}
+.history-detail-item {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 0;
+  font-size: .85rem;
+  color: var(--text-secondary);
+}
+.history-detail-item__qty {
+  font-family: var(--font-d);
+  font-weight: 700;
+  color: var(--amber);
+  font-size: .82rem;
+  min-width: 26px;
+  flex-shrink: 0;
+}
+.history-detail-note {
+  margin-top: 8px;
+  font-size: .8rem;
+  color: var(--amber);
+  padding: 6px 10px;
+  background: var(--amber-alpha);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--amber-dim);
 }
 
 /* ─── Login Page ─────────────────────────────────────────────── */
