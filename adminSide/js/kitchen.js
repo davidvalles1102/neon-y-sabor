@@ -124,19 +124,76 @@ async function handleAction(action, orderId) {
   const { error } = await supabase.from('orders').update(updates).eq('id', orderId)
 
   if (error) { toast('Error al actualizar', 'error'); return }
-  if (action === 'delivered') startTimes.delete(orderId)
+  if (action === 'delivered') {
+    startTimes.delete(orderId)
+    await loadHistory()   // actualizar historial inmediatamente al entregar
+  }
   await loadOrders()
 }
 
+// ─── Kitchen History ───────────────────────────────────────────
+let historyCollapsed = false
+
+async function loadHistory() {
+  const today = new Date().toISOString().split('T')[0]
+  const { data } = await supabase
+    .from('orders')
+    .select('*, restaurant_tables(number), order_items(*)')
+    .eq('status', 'delivered')
+    .gte('updated_at', `${today}T00:00:00`)
+    .order('updated_at', { ascending: false })
+    .limit(25)
+
+  renderHistory(data || [])
+}
+
+function renderHistory(orders) {
+  document.getElementById('historyCount').textContent = orders.length
+
+  const body = document.getElementById('historyBody')
+  if (!orders.length) {
+    body.innerHTML = '<div class="kitchen-empty" style="padding:20px">Sin órdenes entregadas hoy</div>'
+    return
+  }
+
+  body.innerHTML = orders.map(o => {
+    const isExternal = ['delivery', 'takeout'].includes(o.order_type)
+    const label = isExternal
+      ? `${o.order_type === 'delivery' ? '🛵' : '🥡'} ${o.delivery_name || 'Sin nombre'}`
+      : `🍽️ Mesa ${o.restaurant_tables?.number ?? '—'}`
+
+    const items     = o.order_items || []
+    const itemsText = items.map(i => `${i.quantity}× ${i.item_name}`).join(', ')
+    const totalQty  = items.reduce((s, i) => s + i.quantity, 0)
+    const time      = new Date(o.updated_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })
+
+    return `
+      <div class="history-row">
+        <div class="history-row__label">${label}</div>
+        <div class="history-row__items">${itemsText || '—'}</div>
+        <span class="history-row__count">${totalQty} items</span>
+        <div class="history-row__time">${time}</div>
+      </div>`
+  }).join('')
+}
+
+// Toggle colapsar / expandir
+document.getElementById('historyToggle').addEventListener('click', () => {
+  historyCollapsed = !historyCollapsed
+  document.getElementById('historyBody').classList.toggle('collapsed', historyCollapsed)
+  document.getElementById('historyToggleBtn').textContent = historyCollapsed ? '▼' : '▲'
+})
+
 // ─── Realtime subscription ─────────────────────────────────────
+// Un solo canal sin filtro de status para capturar todos los cambios
+// (incluyendo cuando una orden pasa a 'delivered' y ya no estaría en el filtro anterior)
 supabase
-  .channel('kitchen-orders')
+  .channel('kitchen-live')
   .on('postgres_changes', {
     event:  '*',
     schema: 'public',
-    table:  'orders',
-    filter: `status=in.(in_kitchen,ready)`
-  }, () => loadOrders())
+    table:  'orders'
+  }, () => { loadOrders(); loadHistory() })
   .subscribe()
 
 // ─── Timer refresh every 30 seconds ────────────────────────────
@@ -152,3 +209,4 @@ setInterval(() => {
 }, 30_000)
 
 loadOrders()
+loadHistory()

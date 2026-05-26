@@ -47,6 +47,20 @@
 
 </div>
 
+<!-- ── Historial del día ─────────────────────────────────────────── -->
+<div class="kitchen-history" id="kitchenHistorySection">
+  <div class="kitchen-history__header" id="historyToggle">
+    <span class="kitchen-history__title">📋 Historial de hoy</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="badge badge-muted" id="historyCount">0</span>
+      <button class="btn btn-ghost btn-sm" id="historyToggleBtn" style="pointer-events:none">▲</button>
+    </div>
+  </div>
+  <div class="kitchen-history__body" id="historyBody">
+    <div class="kitchen-empty" style="padding:20px">Cargando historial...</div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 <script type="module" src="js/kitchen.js"></script>
 </body>
