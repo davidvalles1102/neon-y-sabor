@@ -10,25 +10,21 @@ let menuItems = []
 let activeCat = 'all'
 let cart      = []   // [{ id, name, price, qty }]
 
+// Roles de personal — nunca se muestran como "cliente"
+const STAFF_ROLES = ['admin', 'waiter', 'kitchen']
+
 // ─── Boot ─────────────────────────────────────────────────────────
 async function init() {
   if (!tableId) { showError('Código QR inválido. No se encontró la mesa.'); return }
 
+  // Auth opcional — cualquiera puede escanear el QR y ordenar sin cuenta
   const session = await getSession()
-  if (!session) {
-    const next = encodeURIComponent('/customerSide/table-order.html?table=' + tableId)
-    window.location.href = 'auth.html?next=' + next
-    return
-  }
-
-  profile = await getProfile(session.user.id)
-  if (!profile) {
-    const meta = session.user.user_metadata ?? {}
-    const { data } = await supabase.from('profiles').upsert({
-      id: session.user.id, full_name: meta.full_name || '', phone: meta.phone || '',
-      role: 'customer', loyalty_points: 0
-    }, { onConflict: 'id' }).select().maybeSingle()
-    profile = data ?? { id: session.user.id, full_name: meta.full_name || '' }
+  if (session) {
+    const p = await getProfile(session.user.id)
+    // Solo usar perfil si es cliente real, no personal del restaurante
+    if (p && !STAFF_ROLES.includes(p.role)) {
+      profile = p
+    }
   }
 
   const { data: tbl } = await supabase
@@ -37,12 +33,14 @@ async function init() {
   if (!tbl) { showError('Mesa no encontrada. Escanea el código QR correcto.'); return }
 
   tableInfo = tbl
-  document.getElementById('tableName').textContent       = `Mesa ${tbl.number}`
-  document.getElementById('desktopTableName').textContent = `Mesa ${tbl.number}`
-  document.getElementById('tableLocation').textContent   = tbl.location
-  document.getElementById('userGreet').textContent       = `Hola, ${profile.full_name || 'Cliente'}`
+  document.getElementById('tableName').textContent        = `Mesa ${tbl.number}`
+  document.getElementById('desktopTableName').textContent  = `Mesa ${tbl.number}`
+  document.getElementById('tableLocation').textContent    = tbl.location
+  document.getElementById('userGreet').textContent        = profile?.full_name
+    ? `Hola, ${profile.full_name}`
+    : ''
 
-  // Mark table occupied as soon as customer scans and loads the menu
+  // Marcar mesa ocupada al escanear
   if (tbl.status !== 'occupied') {
     await supabase.from('restaurant_tables').update({ status: 'occupied' }).eq('id', tableId)
   }
