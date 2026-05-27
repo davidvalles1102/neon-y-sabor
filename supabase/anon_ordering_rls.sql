@@ -45,6 +45,16 @@ CREATE POLICY "orders_anon_insert"
   TO anon
   WITH CHECK (customer_id IS NULL);
 
+-- Anónimos pueden leer sus propias órdenes anónimas (para rastrear estado via QR)
+DROP POLICY IF EXISTS "orders_anon_read" ON public.orders;
+CREATE POLICY "orders_anon_read"
+  ON public.orders FOR SELECT
+  TO anon
+  USING (
+    customer_id IS NULL
+    AND created_at > NOW() - INTERVAL '24 hours'
+  );
+
 -- Actualizar política de autenticados para también permitir customer_id NULL
 -- (cubre el caso de personal del restaurante escaneando el QR para probar)
 DROP POLICY IF EXISTS "orders_customer_insert" ON public.orders;

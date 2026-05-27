@@ -140,11 +140,35 @@ function renderMenuGrid() {
 
 // ─── Ticket ───────────────────────────────────────────────────────
 function setupTicket() {
-  document.getElementById('tablePicker').addEventListener('change', (e) => {
+  document.getElementById('tablePicker').addEventListener('change', async (e) => {
     selectedTable = tables.find(t => t.id === e.target.value) || null
     currentOrder  = null
     renderTicket()
-    if (selectedTable) {
+    if (!selectedTable) return
+
+    // Auto-cargar orden activa si existe (pedido via QR u otro mesero)
+    const { data } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('table_id', selectedTable.id)
+      .in('status', ['open', 'in_kitchen', 'ready', 'delivered'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (data?.length) {
+      const o = data[0]
+      currentOrder = {
+        id:       o.id,
+        table_id: selectedTable.id,
+        items:    mapItems(o.order_items),
+        subtotal: o.subtotal ?? 0,
+        tax:      o.tax      ?? 0,
+        total:    o.total    ?? 0
+      }
+      await markTableOccupied(selectedTable.id)
+      renderTicket()
+      toast(`Mesa ${selectedTable.number}: orden activa cargada ✓`, 'success')
+    } else {
       toast(`Mesa ${selectedTable.number}: sin orden activa. Presiona "+ Nueva Orden" para comenzar.`, 'warning')
     }
   })
@@ -155,36 +179,11 @@ function setupTicket() {
       const name = document.getElementById('posCustName').value.trim()
       if (!name) { toast('Ingresa el nombre del cliente', 'warning'); return }
     }
-
-    // Para salón: buscar orden activa existente antes de crear una nueva
-    if (orderType === 'dine_in') {
-      const { data } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('table_id', selectedTable.id)
-        .in('status', ['open', 'in_kitchen', 'ready', 'delivered'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      if (data?.length) {
-        const o = data[0]
-        currentOrder = {
-          id:       o.id,
-          table_id: selectedTable.id,
-          items:    mapItems(o.order_items),
-          subtotal: o.subtotal ?? 0,
-          tax:      o.tax      ?? 0,
-          total:    o.total    ?? 0
-        }
-        await markTableOccupied(selectedTable.id)
-        renderTicket()
-        toast(`Mesa ${selectedTable.number}: orden activa cargada ✓`, 'success')
-        return
-      }
+    // Si la mesa ya tiene una orden cargada (del QR u otro mesero), no crear otra
+    if (currentOrder) {
+      toast('Ya hay una orden activa. Agrega platillos del menú.', 'warning')
+      return
     }
-
-    // Sin orden existente → crear nueva
-    currentOrder = null
     await loadOrCreateOrder(true)
   })
 
@@ -350,6 +349,12 @@ function renderTicket() {
   const hasItems = !!currentOrder?.items.length
   document.getElementById('sendKitchenBtn').disabled = !hasItems
   document.getElementById('payBtn').disabled         = !hasItems
+
+  const newOrderBtn = document.getElementById('newOrderBtn')
+  if (newOrderBtn) {
+    newOrderBtn.disabled    = !!currentOrder
+    newOrderBtn.textContent = currentOrder ? '✓ Orden cargada' : '+ Nueva Orden'
+  }
 
   updateMobFab()
 }

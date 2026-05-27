@@ -164,6 +164,50 @@
       text-shadow: var(--glow-amber-s);
     }
 
+    /* ─── Order tracker modal ────────────────────────────────── */
+    .tracker-order-card {
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 14px;
+      margin-bottom: 12px;
+      transition: border-color var(--ts), box-shadow var(--ts);
+    }
+    .tracker-order-card--ready {
+      border-color: var(--green-dim);
+      animation: pulse-tracker 2s ease-in-out infinite;
+    }
+    @keyframes pulse-tracker {
+      0%, 100% { box-shadow: 0 0 8px rgba(57,255,20,.15) }
+      50%       { box-shadow: 0 0 22px rgba(57,255,20,.4) }
+    }
+    .tracker-order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .tracker-order-num { font-family: var(--font-d); color: var(--amber); font-size: .95rem; }
+    .tracker-status    { font-size: .82rem; text-align: right; }
+    .tracker-status--kitchen { color: var(--amber) }
+    .tracker-status--ready   { color: var(--green); font-weight: 700; text-shadow: var(--glow-green-s) }
+    .tracker-status--done    { color: var(--text-secondary) }
+    .tracker-items {
+      font-size: .82rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .tracker-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      font-size: .82rem;
+    }
+    .tracker-total { font-weight: 600; color: var(--text); }
+
     /* ─── Item "in cart" indicator ───────────────────────────── */
     .order-item-card.in-cart {
       border-color: var(--green-dim);
@@ -205,7 +249,13 @@
       <span class="table-banner__mesa" id="tableName">Mesa —</span>
       <span class="table-banner__loc" id="tableLocation"></span>
     </div>
-    <span class="table-banner__user" id="userGreet"></span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn btn-ghost btn-sm" id="myOrdersBtn"
+        style="display:none;font-size:.78rem;padding:5px 12px;white-space:nowrap">
+        📋 Mis pedidos
+      </button>
+      <span class="table-banner__user" id="userGreet"></span>
+    </div>
   </div>
 
   <div class="table-order-layout">
@@ -317,6 +367,19 @@
   <p class="success-order-num" id="successOrderNum"></p>
   <p class="text-secondary" style="max-width:280px">Tu pedido está en camino a la cocina. El mesero lo traerá pronto a tu mesa.</p>
   <button class="btn btn-primary btn-lg" id="orderMoreBtn">Seguir Ordenando</button>
+</div>
+
+<!-- ─── Order tracker modal ─────────────────────────────────────── -->
+<div class="mobile-cart-backdrop" id="trackerBackdrop">
+  <div class="mobile-cart-sheet" style="max-height:80vh">
+    <div class="mobile-cart-header">
+      <h3>📋 Mis Pedidos</h3>
+      <button id="trackerClose">✕</button>
+    </div>
+    <div id="trackerList">
+      <p class="text-muted text-sm" style="padding:12px 0">Sin pedidos aún.</p>
+    </div>
+  </div>
 </div>
 
 <div id="toast-container"></div>

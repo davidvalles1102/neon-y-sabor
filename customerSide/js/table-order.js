@@ -9,6 +9,7 @@ let tableInfo = null
 let menuItems = []
 let activeCat = 'all'
 let cart      = []   // [{ id, name, price, qty }]
+let myOrders  = []   // [{ id, shortId, status, items, total, notes }]
 
 // Roles de personal — nunca se muestran como "cliente"
 const STAFF_ROLES = ['admin', 'waiter', 'kitchen']
@@ -246,6 +247,17 @@ async function submitOrder(notesId, msgId, btnId) {
     }))
   )
 
+  // Track this order
+  myOrders.push({
+    id:      order.id,
+    shortId: order.id.slice(0, 8).toUpperCase(),
+    status:  'in_kitchen',
+    items:   cart.map(c => ({ name: c.name, qty: c.qty, price: c.price })),
+    total,
+    notes
+  })
+  updateTrackerBtn()
+
   // Show success
   closeMobileCart()
   document.getElementById('successOrderNum').textContent = `#${order.id.slice(0, 8).toUpperCase()}`
@@ -274,6 +286,83 @@ function setupEvents() {
     renderDesktopCart()
     updateMobileBar()
   })
+
+  document.getElementById('myOrdersBtn').addEventListener('click', () => {
+    renderTracker()
+    document.getElementById('trackerBackdrop').classList.add('visible')
+  })
+  document.getElementById('trackerClose').addEventListener('click', () => {
+    document.getElementById('trackerBackdrop').classList.remove('visible')
+  })
+  document.getElementById('trackerBackdrop').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) document.getElementById('trackerBackdrop').classList.remove('visible')
+  })
+}
+
+// ─── Order Tracker ─────────────────────────────────────────────────
+const TRACKER_STATUS = {
+  in_kitchen: { cls: 'tracker-status--kitchen', icon: '🍳', text: 'En cocina...' },
+  ready:      { cls: 'tracker-status--ready',   icon: '✅', text: '¡Listo! El mesero viene en camino' },
+  delivered:  { cls: 'tracker-status--done',    icon: '🍽️', text: 'Entregado en tu mesa' },
+  paid:       { cls: 'tracker-status--done',    icon: '✓',  text: 'Completado' }
+}
+
+function updateTrackerBtn() {
+  const btn = document.getElementById('myOrdersBtn')
+  if (!myOrders.length) { btn.style.display = 'none'; return }
+  btn.style.display = ''
+  const readyCount = myOrders.filter(o => o.status === 'ready').length
+  if (readyCount) {
+    btn.innerHTML = `🔔 <strong style="color:var(--green)">${readyCount} listo${readyCount > 1 ? 's' : ''}</strong>`
+  } else {
+    btn.textContent = `📋 Mis pedidos (${myOrders.length})`
+  }
+}
+
+function renderTracker() {
+  const list = document.getElementById('trackerList')
+  if (!myOrders.length) {
+    list.innerHTML = '<p class="text-muted text-sm" style="padding:12px 0">Sin pedidos aún.</p>'
+    return
+  }
+  list.innerHTML = [...myOrders].reverse().map(o => {
+    const s = TRACKER_STATUS[o.status] || { cls: 'tracker-status--kitchen', icon: '⏳', text: o.status }
+    return `
+      <div class="tracker-order-card ${o.status === 'ready' ? 'tracker-order-card--ready' : ''}">
+        <div class="tracker-order-header">
+          <span class="tracker-order-num">#${o.shortId}</span>
+          <span class="tracker-status ${s.cls}">${s.icon} ${s.text}</span>
+        </div>
+        <div class="tracker-items">${o.items.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div>
+        <div class="tracker-footer">
+          ${o.notes ? `<span style="color:var(--text-secondary)">📝 ${o.notes}</span>` : '<span></span>'}
+          <span class="tracker-total">${fmt.currency(o.total)}</span>
+        </div>
+      </div>`
+  }).join('')
+}
+
+// Escuchar cambios de estado en tiempo real para los pedidos de esta mesa
+if (tableId) {
+  supabase.channel(`table-tracker-${tableId}`)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'orders',
+      filter: `table_id=eq.${tableId}`
+    }, payload => {
+      const o = myOrders.find(x => x.id === payload.new.id)
+      if (!o) return
+      const prev = o.status
+      o.status = payload.new.status
+      updateTrackerBtn()
+      const backdrop = document.getElementById('trackerBackdrop')
+      if (backdrop?.classList.contains('visible')) renderTracker()
+      if (prev !== 'ready' && payload.new.status === 'ready') {
+        toast('¡Tu pedido está listo! 🍽️ El mesero lo traerá pronto', 'success', 6000)
+      }
+    })
+    .subscribe()
 }
 
 init()
