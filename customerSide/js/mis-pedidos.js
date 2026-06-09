@@ -1,4 +1,4 @@
-import { supabase, getSession, getProfile, fmt } from '../../shared/supabase-client.js'
+import { supabase, getCustomerSession, getProfile, fmt } from '../../shared/supabase-client.js'
 
 const STATUS_CFG = {
   pending:    { label: 'Pendiente',   cls: 'badge-amber', icon: '🕐', active: true  },
@@ -13,7 +13,7 @@ let realtimeChannel = null
 
 async function init() {
   // Auto-fill phone from profile if logged in
-  const session = await getSession()
+  const session = await getCustomerSession()
   if (session) {
     const profile = await getProfile(session.user.id)
     if (profile?.phone) {

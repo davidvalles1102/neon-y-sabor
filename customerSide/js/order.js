@@ -1,4 +1,4 @@
-import { supabase, getSession, getProfile, calcTotals, fmt } from '../../shared/supabase-client.js'
+import { supabase, getCustomerSession, getProfile, calcTotals, fmt } from '../../shared/supabase-client.js'
 import { toast } from './utils.js'
 
 const DELIVERY_FEE = 3000   // COP — costo fijo de domicilio
@@ -13,7 +13,7 @@ let activeCat    = 'all'
 
 // ─── Init ─────────────────────────────────────────────────────────
 async function init() {
-  const session = await getSession()
+  const session = await getCustomerSession()
   if (session) {
     userProfile = await getProfile(session.user.id)
     if (userProfile.full_name) document.getElementById('custName').value  = userProfile.full_name

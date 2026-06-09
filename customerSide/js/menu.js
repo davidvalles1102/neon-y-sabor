@@ -1,9 +1,9 @@
-import { supabase, getSession } from '../../shared/supabase-client.js'
+import { supabase, getCustomerSession } from '../../shared/supabase-client.js'
 import { toast } from './utils.js'
 
 // ─── Nav auth state ───────────────────────────────────────────────
 ;(async () => {
-  const session = await getSession()
+  const session = await getCustomerSession()
   const authBtn = document.getElementById('nav-auth-btn')
   if (session && authBtn) {
     authBtn.textContent = 'Mi Perfil'

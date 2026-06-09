@@ -1,10 +1,10 @@
-import { supabase, getSession, fmt } from '../../shared/supabase-client.js'
+import { supabase, getCustomerSession, fmt } from '../../shared/supabase-client.js'
 import { toast } from './utils.js'
 
 let currentUser = null
 
 async function init() {
-  const session = await getSession()
+  const session = await getCustomerSession()
   currentUser = session?.user ?? null
 
   const authGate  = document.getElementById('authGate')

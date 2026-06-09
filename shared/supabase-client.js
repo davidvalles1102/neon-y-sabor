@@ -14,6 +14,19 @@ export async function getSession() {
   return session
 }
 
+const STAFF_ROLES = ['admin', 'waiter', 'kitchen']
+
+// Igual que getSession pero devuelve null si el usuario es staff.
+// Usar en todas las páginas del customer side para que el personal
+// no aparezca como cliente logueado.
+export async function getCustomerSession() {
+  const session = await getSession()
+  if (!session) return null
+  const profile = await getProfile(session.user.id)
+  if (profile && STAFF_ROLES.includes(profile.role)) return null
+  return session
+}
+
 export async function getProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
