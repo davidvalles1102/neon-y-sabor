@@ -1,0 +1,6 @@
+{
+  "files": ["adminSide/**/*.html", "customerSide/**/*.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
