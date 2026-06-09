@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@600;700&display=swap">
   <title>Neón y Sabor Mi Rancho — Menú</title>
   <link rel="stylesheet" href="../shared/css/design-system.css">
   <link rel="stylesheet" href="css/customer.css">
@@ -18,20 +21,21 @@
       <span class="brand-rest">Sabor Mi Rancho</span>
     </a>
     <div class="cust-nav__links">
-      <a href="index.html" class="nav-link active">Menú</a>
+      <a href="index.html" class="nav-link active" aria-current="page">Menú</a>
       <a href="order.html"        class="nav-link">🛵 Ordenar</a>
       <a href="mis-pedidos.html"  class="nav-link">📦 Mis Pedidos</a>
       <a href="reservations.html" class="nav-link">Reservaciones</a>
       <a href="profile.html"      class="nav-link" id="nav-profile">Mi Perfil</a>
       <a href="auth.html"         class="btn btn-primary btn-sm" id="nav-auth-btn">Ingresar</a>
     </div>
-    <button class="nav-toggle" id="navToggle" aria-label="Menú">
+    <button class="nav-toggle" id="navToggle" aria-label="Menú" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
   </div>
   <div class="nav-mobile" id="navMobile">
-    <a href="index.html">Menú</a>
+    <a href="index.html" aria-current="page">Menú</a>
     <a href="order.html">🛵 Ordenar</a>
+    <a href="mis-pedidos.html">📦 Mis Pedidos</a>
     <a href="reservations.html">Reservaciones</a>
     <a href="profile.html">Mi Perfil</a>
     <a href="auth.html" id="mobile-auth-link">Ingresar</a>
@@ -42,7 +46,7 @@
 <header class="hero">
   <div class="hero__bg-grid"></div>
   <div class="hero__content">
-    <p class="hero__eyebrow neon-amber">Bienvenido a</p>
+    <p class="hero__eyebrow neon-amber">Piamonte, Cauca · Lun–Dom 6:30–15:30 y 16:00–23:00</p>
     <h1 class="hero__title">
       <span class="neon-green">Neón</span>
       <span class="hero__title-rest"> y Sabor<br>Mi Rancho</span>
@@ -77,9 +81,7 @@
   </div>
 
   <!-- Disclaimer imágenes -->
-  <p style="font-size:.71rem;color:var(--text-secondary);opacity:.65;padding:0 16px 4px;margin:0;text-align:center">
-    📸 Imágenes de referencia — la presentación puede variar.
-  </p>
+  <p class="disclaimer-text">📸 Imágenes de referencia — la presentación puede variar.</p>
 
   <!-- Menu Grid -->
   <div class="menu-grid" id="menuGrid">
@@ -98,7 +100,7 @@
 <!-- ── Featured / Promotion Banner ──────────────────────────── -->
 <section class="promo-band">
   <div class="promo-band__inner">
-    <p class="neon-amber" style="font-family:var(--font-d);font-size:1.4rem;font-weight:700;">¡Gana puntos con cada visita!</p>
+    <p class="promo-title neon-amber">¡Gana puntos con cada visita!</p>
     <p class="text-secondary">Regístrate y acumula puntos de lealtad en cada orden. Canjéalos por platillos gratis.</p>
     <a href="auth.html?mode=register" class="btn btn-amber mt-16">Crear Cuenta</a>
   </div>

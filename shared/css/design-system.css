@@ -3,8 +3,6 @@
    Dark mode with neon green (#39FF14) and amber (#FFB300) accents
    ================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@600;700&display=swap');
-
 /* ─── CSS Variables ──────────────────────────────────────────── */
 :root {
   /* Backgrounds */
@@ -18,7 +16,7 @@
   /* Text */
   --text-primary:   #F2ECD8;
   --text-secondary: #9E9080;
-  --text-muted:     #5A5045;
+  --text-muted:     #6E6058;
   --text-invert:    #080808;
 
   /* Neon Green */
@@ -63,12 +61,37 @@
 
   /* Sidebar width (admin) */
   --sidebar-w: 220px;
+
+  /* Z-index scale */
+  --z-dropdown:       100;
+  --z-sticky:         200;
+  --z-modal-backdrop: 600;
+  --z-modal:          700;
+  --z-toast:          800;
+  --z-tooltip:        900;
 }
 
 /* ─── Reset & Base ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
+
+/* ─── Focus visible ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+button:focus-visible,
+a:focus-visible,
+.btn:focus-visible,
+.cat-tab:focus-visible,
+.pos-cat:focus-visible,
+.nav-link:focus-visible,
+.auth-tab:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--green-alpha);
+}
 
 body {
   font-family: var(--font);
@@ -261,7 +284,7 @@ select.form-control { appearance: none; cursor: pointer; }
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -401,6 +424,16 @@ select.form-control { appearance: none; cursor: pointer; }
 ::-webkit-scrollbar-track { background: var(--bg-2); }
 ::-webkit-scrollbar-thumb { background: var(--bg-5); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ─── Print (receipt) ────────────────────────────────────────── */
 @media print {

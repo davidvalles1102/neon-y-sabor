@@ -48,7 +48,7 @@
 .nav-link:hover, .nav-link.active { color: var(--text-primary); }
 .nav-link.active { color: var(--green); }
 
-.nav-toggle { display: none; flex-direction: column; gap: 5px; background: none; padding: 6px; }
+.nav-toggle { display: none; flex-direction: column; gap: 5px; background: none; padding: 10px 8px; }
 .nav-toggle span { width: 22px; height: 2px; background: var(--text-secondary); border-radius: 2px; transition: var(--t); }
 
 .nav-mobile { display: none; flex-direction: column; padding: 12px 24px 16px; gap: 4px; border-top: 1px solid var(--border); }
@@ -64,6 +64,7 @@
 /* ─── Hero ───────────────────────────────────────────────────── */
 .hero {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,12 +87,11 @@
 .hero__content { position: relative; z-index: 2; max-width: 700px; }
 
 .hero__eyebrow {
-  font-family: var(--font-d);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: .2em;
-  text-transform: uppercase;
+  font-size: .82rem;
+  font-weight: 500;
+  letter-spacing: .03em;
   margin-bottom: 12px;
+  opacity: .9;
 }
 
 .hero__title {
@@ -673,7 +673,7 @@
 
 .mini-step.done .mini-step__dot {
   border-color: var(--green);
-  background: rgba(0,220,130,.15);
+  background: var(--green-alpha);
 }
 
 .mini-step.active .mini-step__dot {
@@ -696,3 +696,17 @@
 .mini-step.active .mini-step__label { color: var(--amber); }
 
 .mt-24 { margin-top: 24px; }
+
+/* ─── Utility text classes ───────────────────────────────────── */
+.disclaimer-text {
+  font-size: .71rem;
+  color: var(--text-muted);
+  padding: 0 16px 4px;
+  text-align: center;
+}
+
+.promo-title {
+  font-family: var(--font-d);
+  font-size: 1.4rem;
+  font-weight: 700;
+}

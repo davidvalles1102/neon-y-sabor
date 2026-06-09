@@ -17,7 +17,10 @@ import { toast } from './utils.js'
 
   // Mobile nav toggle
   document.getElementById('navToggle')?.addEventListener('click', () => {
-    document.getElementById('navMobile')?.classList.toggle('open')
+    const mobile  = document.getElementById('navMobile')
+    const toggle  = document.getElementById('navToggle')
+    mobile?.classList.toggle('open')
+    toggle?.setAttribute('aria-expanded', String(mobile?.classList.contains('open') ?? false))
   })
 })()
 
