@@ -54,12 +54,20 @@ neon-y-sabor/
 ├── customerSide/           ← Public-facing website
 │   ├── index.html          ← Menu browsing
 │   ├── auth.html           ← Login / Register
+│   ├── order.html          ← Delivery / takeout order flow
+│   ├── table-order.html    ← Dine-in order from table (QR)
+│   ├── mis-pedidos.html    ← Order history + live status
+│   ├── track.html          ← Real-time order tracking
 │   ├── reservations.html   ← Make / view reservations
 │   ├── profile.html        ← Loyalty points, history
 │   ├── css/customer.css
 │   └── js/
 │       ├── auth.js
 │       ├── menu.js
+│       ├── order.js
+│       ├── table-order.js
+│       ├── mis-pedidos.js
+│       ├── track.js
 │       ├── reservations.js
 │       ├── profile.js
 │       └── utils.js
@@ -68,8 +76,11 @@ neon-y-sabor/
     ├── dashboard.html      ← KPIs + charts
     ├── orders.html         ← POS terminal (split-panel)
     ├── kitchen.html        ← Real-time kitchen display
+    ├── delivery.html       ← Delivery orders management
+    ├── tables.html         ← Table / zone management
     ├── payments.html       ← Payment history + export
     ├── menu-management.html← CRUD menu items & categories
+    ├── reservations.html   ← Reservation management
     ├── reports.html        ← Charts + CSV download
     ├── customers.html      ← Customer list + loyalty management
     ├── css/admin.css
@@ -78,8 +89,11 @@ neon-y-sabor/
         ├── dashboard.js
         ├── orders.js       ← Full POS logic
         ├── kitchen.js      ← Supabase Realtime orders
+        ├── delivery.js
+        ├── tables.js
         ├── payments.js
         ├── menu-management.js
+        ├── reservations.js
         ├── reports.js
         └── customers.js
 ```
@@ -112,14 +126,21 @@ python -m http.server 8080
 |---|---|
 | Customer menu browsing | `customerSide/index.html` + `js/menu.js` |
 | Customer auth (login/register/reset) | `customerSide/auth.html` + `js/auth.js` |
-| Reservations | `customerSide/reservations.html` + `js/reservations.js` |
+| Delivery / takeout order flow | `customerSide/order.html` + `js/order.js` |
+| Dine-in order from table (QR) | `customerSide/table-order.html` + `js/table-order.js` |
+| Order history + live status | `customerSide/mis-pedidos.html` + `js/mis-pedidos.js` |
+| Real-time order tracking | `customerSide/track.html` + `js/track.js` |
+| Reservations (customer) | `customerSide/reservations.html` + `js/reservations.js` |
 | Loyalty points profile | `customerSide/profile.html` + `js/profile.js` |
 | Staff login (role-based redirect) | `adminSide/login.html` + `js/admin-auth.js` |
 | POS terminal (take orders, send to kitchen) | `adminSide/orders.html` + `js/orders.js` |
 | Real-time kitchen display | `adminSide/kitchen.html` + `js/kitchen.js` |
+| Delivery orders management | `adminSide/delivery.html` + `js/delivery.js` |
+| Table / zone management | `adminSide/tables.html` + `js/tables.js` |
 | Process payment + print receipt | Inside `js/orders.js` (pay modal + receipt modal) |
 | Payment history + export CSV | `adminSide/payments.html` + `js/payments.js` |
 | Menu CRUD (items + categories) | `adminSide/menu-management.html` + `js/menu-management.js` |
+| Reservation management (staff) | `adminSide/reservations.html` + `js/reservations.js` |
 | Sales reports + charts + CSV | `adminSide/reports.html` + `js/reports.js` |
 | Customer management + loyalty adjust | `adminSide/customers.html` + `js/customers.js` |
 | Dashboard (KPIs + live charts) | `adminSide/dashboard.html` + `js/dashboard.js` |
