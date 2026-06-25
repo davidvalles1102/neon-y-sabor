@@ -1,8 +1,19 @@
 import { supabase, fmt } from '../../shared/supabase-client.js'
 import { initAdminShell } from './admin-auth.js'
 
+const EXPENSE_CAT_LABELS = {
+  insumos:       '🥩 Insumos',
+  servicios:     '💡 Servicios',
+  nomina:        '👥 Nómina',
+  renta:         '🏠 Renta',
+  mantenimiento: '🔧 Mantenimiento',
+  marketing:     '📣 Marketing',
+  transporte:    '🛵 Transporte',
+  otros:         '📦 Otros'
+}
+
 let days = 30
-let salesChart, paymentChart, categoryChart
+let salesChart, paymentChart, categoryChart, expenseCategoryChart, profitChart
 
 async function init() {
   const ctx = await initAdminShell(['admin'])
@@ -21,18 +32,21 @@ async function init() {
 async function loadAll() {
   const since = new Date(Date.now() - days * 86400_000).toISOString()
 
-  const [{ data: orders }, { data: payments }, { data: orderItems }] = await Promise.all([
+  const [{ data: orders }, { data: payments }, { data: orderItems }, { data: expenses }] = await Promise.all([
     supabase.from('orders').select('*, restaurant_tables(number), profiles!orders_waiter_id_fkey(full_name)')
       .in('status', ['paid', 'delivered']).gte('created_at', since).order('created_at'),
     supabase.from('payments').select('*').gte('created_at', since),
     supabase.from('order_items').select('*, menu_items(name, category_id, categories(name))')
-      .gte('created_at', since)
+      .gte('created_at', since),
+    supabase.from('expenses').select('*').gte('expense_date', since.split('T')[0])
   ])
 
-  renderKPIs(orders, payments)
+  renderKPIs(orders, payments, expenses)
   renderDailySalesChart(orders)
   renderPaymentPieChart(payments, orders)
   renderCategoryChart(orderItems)
+  renderExpenseCategoryChart(expenses)
+  renderProfitChart(orders, expenses)
   renderTopItems(orderItems)
   renderOrdersTable(orders)
 
@@ -40,16 +54,24 @@ async function loadAll() {
   window._exportPayments = payments
 }
 
-function renderKPIs(orders, payments) {
+function renderKPIs(orders, payments, expenses) {
   // Use order totals so delivery/takeout revenue is included (payments table = dine-in only)
-  const revenue = orders?.reduce((s, o) => s + +o.total, 0) ?? 0
+  const revenue   = orders?.reduce((s, o) => s + +o.total, 0) ?? 0
   const customers = new Set(orders?.map(o => o.customer_id).filter(Boolean)).size
-  const avg     = orders?.length ? revenue / orders.length : 0
+  const avg       = orders?.length ? revenue / orders.length : 0
+  const totalExpenses = expenses?.reduce((s, e) => s + +e.amount, 0) ?? 0
+  const netProfit      = revenue - totalExpenses
 
   document.getElementById('rTotalRevenue').textContent      = fmt.currency(revenue)
   document.getElementById('rTotalOrders').textContent       = orders?.length ?? 0
   document.getElementById('rAvgTicket').textContent         = fmt.currency(avg)
   document.getElementById('rUniqueCustomers').textContent   = customers
+  document.getElementById('rTotalExpenses').textContent     = fmt.currency(totalExpenses)
+
+  const netEl = document.getElementById('rNetProfit')
+  netEl.textContent = fmt.currency(netProfit)
+  netEl.classList.toggle('text-danger', netProfit < 0)
+  netEl.classList.toggle('neon-green', netProfit >= 0)
 }
 
 function renderDailySalesChart(orders) {
@@ -141,6 +163,83 @@ function renderCategoryChart(orderItems) {
       }]
     },
     options: { ...chartOptions('$'), indexAxis: 'y' }
+  })
+}
+
+function renderExpenseCategoryChart(expenses) {
+  const byCat = {}
+  expenses?.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + +e.amount })
+  const labels = Object.keys(byCat).map(k => EXPENSE_CAT_LABELS[k] ?? k)
+  const values = Object.values(byCat)
+
+  const ctx = document.getElementById('expenseCategoryChart').getContext('2d')
+  if (expenseCategoryChart) expenseCategoryChart.destroy()
+  expenseCategoryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Gastos ($)',
+        data: values,
+        backgroundColor: 'rgba(255,59,59,0.7)',
+        borderColor: '#FF3B3B',
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: { ...chartOptions('$'), indexAxis: 'y' }
+  })
+}
+
+function renderProfitChart(orders, expenses) {
+  const revenueByDay = {}
+  orders?.forEach(o => {
+    const d = o.created_at.slice(0, 10)
+    revenueByDay[d] = (revenueByDay[d] || 0) + +o.total
+  })
+  const expenseByDay = {}
+  expenses?.forEach(e => { expenseByDay[e.expense_date] = (expenseByDay[e.expense_date] || 0) + +e.amount })
+
+  const labels = [...new Set([...Object.keys(revenueByDay), ...Object.keys(expenseByDay)])].sort()
+  const revenueValues = labels.map(d => revenueByDay[d] || 0)
+  const expenseValues = labels.map(d => expenseByDay[d] || 0)
+
+  const ctx = document.getElementById('profitChart').getContext('2d')
+  if (profitChart) profitChart.destroy()
+  profitChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: revenueValues,
+          borderColor: '#39FF14',
+          backgroundColor: 'rgba(57,255,20,0.08)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#39FF14',
+          pointRadius: 3
+        },
+        {
+          label: 'Gastos',
+          data: expenseValues,
+          borderColor: '#FF3B3B',
+          backgroundColor: 'rgba(255,59,59,0.08)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#FF3B3B',
+          pointRadius: 3
+        }
+      ]
+    },
+    options: {
+      ...chartOptions('$'),
+      plugins: {
+        ...chartOptions('$').plugins,
+        legend: { display: true, labels: { color: '#9E9080', font: { size: 11 } } }
+      }
+    }
   })
 }
 

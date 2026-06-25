@@ -26,6 +26,7 @@
     <a href="reservations.html"    class="slink">📅 Reservaciones</a>
     <a href="delivery.html"        class="slink">🛵 Delivery</a>
     <a href="payments.html"        class="slink">💳 Pagos</a>
+    <a href="expense-tracker.html" class="slink">💸 Gastos</a>
     <a href="menu-management.html" class="slink">🍽️ Menú</a>
     <a href="reports.html"         class="slink">📈 Reportes</a>
     <a href="customers.html"       class="slink">👥 Clientes</a>
@@ -49,7 +50,7 @@
   <div class="admin-content">
 
     <!-- Stats Row -->
-    <div class="stats-grid" id="statsGrid">
+    <div class="stats-grid" id="statsGrid" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat-card stat-green">
         <div class="stat-label">Ventas Hoy</div>
         <div class="stat-value" id="salesToday">$0.00</div>
@@ -67,6 +68,10 @@
       <div class="stat-card">
         <div class="stat-label">Órdenes en Cocina</div>
         <div class="stat-value" id="inKitchen">0</div>
+      </div>
+      <div class="stat-card stat-danger">
+        <div class="stat-label">Gastos de Hoy</div>
+        <div class="stat-value" id="expensesToday">$0.00</div>
       </div>
     </div>
 

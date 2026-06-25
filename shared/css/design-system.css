@@ -399,6 +399,7 @@ select.form-control { appearance: none; cursor: pointer; }
 .stat-sub   { font-size: .8rem; color: var(--text-secondary); }
 .stat-green .stat-value { color: var(--green); text-shadow: var(--glow-green-s); }
 .stat-amber .stat-value { color: var(--amber); text-shadow: var(--glow-amber-s); }
+.stat-danger .stat-value { color: var(--danger); }
 
 /* ─── Utility ────────────────────────────────────────────────── */
 .flex        { display: flex; }

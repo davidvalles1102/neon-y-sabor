@@ -21,7 +21,8 @@ async function loadDashboard() {
     { data: tables },
     { data: inKitchen },
     { data: todayPayments },
-    { data: topItems }
+    { data: topItems },
+    { data: todayExpenses }
   ] = await Promise.all([
     supabase.from('payments').select('amount').gte('created_at', `${today}T00:00:00`),
     supabase.from('payments').select('amount, created_at').gte('created_at', weekAgo),
@@ -30,7 +31,8 @@ async function loadDashboard() {
     supabase.from('payments').select('method, amount').gte('created_at', `${today}T00:00:00`),
     supabase.from('order_items')
       .select('item_name, quantity, item_price')
-      .gte('created_at', `${today}T00:00:00`)
+      .gte('created_at', `${today}T00:00:00`),
+    supabase.from('expenses').select('amount').eq('expense_date', today)
   ])
 
   // KPIs
@@ -44,6 +46,7 @@ async function loadDashboard() {
   document.getElementById('tablesOccupied').textContent= occupied
   document.getElementById('tablesTotal').textContent   = `de ${tables?.length ?? 0} mesas`
   document.getElementById('inKitchen').textContent     = inKitchen?.length ?? 0
+  document.getElementById('expensesToday').textContent = fmt.currency((todayExpenses || []).reduce((s, e) => s + +e.amount, 0))
 
   renderSalesChart(weekOrders || [])
   renderPaymentChart(todayPayments || [])
