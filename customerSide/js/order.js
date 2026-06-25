@@ -1,5 +1,6 @@
 import { supabase, getCustomerSession, getProfile, calcTotals, fmt } from '../../shared/supabase-client.js'
 import { toast } from './utils.js'
+import { getItemModifierGroups, openModifierModal, modifiersExtraPrice, modifiersSummary, buildLineKey } from '../../shared/modifier-modal.js'
 
 const DELIVERY_FEE = 3000   // COP — costo fijo de domicilio
 
@@ -95,11 +96,21 @@ function renderGrid() {
   `}).join('')
 
   grid.querySelectorAll('.order-item-card').forEach(card => {
-    card.addEventListener('click', () => addToCart({
-      id:    card.dataset.id,
-      name:  card.dataset.name,
-      price: parseFloat(card.dataset.price)
-    }))
+    card.addEventListener('click', async () => {
+      const item = {
+        id:    card.dataset.id,
+        name:  card.dataset.name,
+        price: parseFloat(card.dataset.price)
+      }
+      const groups = await getItemModifierGroups(item.id)
+      if (groups.length) {
+        const selections = await openModifierModal(item, groups)
+        if (selections === null) return
+        addToCart(item, selections)
+      } else {
+        addToCart(item)
+      }
+    })
   })
 }
 
@@ -155,19 +166,20 @@ function updatePaymentNotice() {
 }
 
 // ─── Cart ─────────────────────────────────────────────────────────
-function addToCart(item) {
-  const ex = cart.find(i => i.id === item.id)
+function addToCart(item, modifiers = []) {
+  const lineKey = buildLineKey(item.id, modifiers)
+  const ex = cart.find(i => i.lineKey === lineKey)
   if (ex) ex.qty++
-  else cart.push({ ...item, qty: 1 })
+  else cart.push({ ...item, price: item.price + modifiersExtraPrice(modifiers), modifiers, lineKey, qty: 1 })
   renderCart()
   toast(`${item.name} agregado`, 'success', 1500)
 }
 
-function changeQty(id, delta) {
-  const it = cart.find(i => i.id === id)
+function changeQty(lineKey, delta) {
+  const it = cart.find(i => i.lineKey === lineKey)
   if (!it) return
   it.qty += delta
-  if (it.qty <= 0) cart = cart.filter(i => i.id !== id)
+  if (it.qty <= 0) cart = cart.filter(i => i.lineKey !== lineKey)
   renderCart()
 }
 
@@ -184,14 +196,14 @@ function renderCart() {
   } else {
     itemsEl.innerHTML = cart.map(i => `
       <div class="cart-item">
-        <span class="cart-item__name">${i.name}</span>
+        <span class="cart-item__name">${i.name}${i.modifiers?.length ? `<div class="text-xs text-muted">${modifiersSummary(i.modifiers)}</div>` : ''}</span>
         <div class="cart-item__qty">
-          <button class="qty-btn minus" onclick="cartQty('${i.id}',-1)">−</button>
+          <button class="qty-btn minus" onclick="cartQty('${i.lineKey}',-1)">−</button>
           <span class="qty-num">${i.qty}</span>
-          <button class="qty-btn" onclick="cartQty('${i.id}',1)">+</button>
+          <button class="qty-btn" onclick="cartQty('${i.lineKey}',1)">+</button>
         </div>
         <span class="cart-item__price">${fmt.currency(i.price * i.qty)}</span>
-        <span class="cart-item__del" onclick="cartQty('${i.id}',-${i.qty})">✕</span>
+        <span class="cart-item__del" onclick="cartQty('${i.lineKey}',-${i.qty})">✕</span>
       </div>
     `).join('')
     document.getElementById('placeOrderBtn').disabled = false
@@ -275,7 +287,15 @@ async function placeOrder() {
     item_price:   i.price,
     quantity:     i.qty
   }))
-  await supabase.from('order_items').insert(itemsPayload)
+  const { data: insertedItems } = await supabase.from('order_items').insert(itemsPayload).select()
+
+  const modifierRows = []
+  ;(insertedItems || []).forEach((row, idx) => {
+    (cart[idx].modifiers || []).forEach(m => {
+      modifierRows.push({ order_item_id: row.id, option_name: m.option_name, price_delta: m.price_delta })
+    })
+  })
+  if (modifierRows.length) await supabase.from('order_item_modifiers').insert(modifierRows)
 
   showSuccessModal(order, grandTotal)
   cart = []

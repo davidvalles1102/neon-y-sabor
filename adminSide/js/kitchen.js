@@ -1,5 +1,6 @@
 import { supabase } from '../../shared/supabase-client.js'
 import { toast } from './admin-auth.js'
+import { modifiersSummary } from '../../shared/modifier-modal.js'
 
 // Kitchen display — no role gate, but requires authenticated staff
 ;(async () => {
@@ -24,7 +25,7 @@ const orderMeta  = new Map()  // orderId → { order_type }
 async function loadOrders() {
   const { data } = await supabase
     .from('orders')
-    .select('*, restaurant_tables(number), order_items(*)')
+    .select('*, restaurant_tables(number), order_items(*, order_item_modifiers(*))')
     .in('status', ['in_kitchen', 'ready'])
     .order('created_at')
 
@@ -94,6 +95,7 @@ function buildCard(order) {
             <span class="kitchen-item__qty">${i.quantity}</span>
             <div>
               <div>${i.item_name}</div>
+              ${i.order_item_modifiers?.length ? `<div class="kitchen-item__note">${modifiersSummary(i.order_item_modifiers.map(m => ({ option_name: m.option_name })))}</div>` : ''}
               ${i.notes ? `<div class="kitchen-item__note">📝 ${i.notes}</div>` : ''}
             </div>
           </div>
@@ -138,7 +140,7 @@ async function loadHistory() {
   const today = new Date().toISOString().split('T')[0]
   const { data } = await supabase
     .from('orders')
-    .select('*, restaurant_tables(number), order_items(*)')
+    .select('*, restaurant_tables(number), order_items(*, order_item_modifiers(*))')
     .eq('status', 'delivered')
     .gte('updated_at', `${today}T00:00:00`)
     .order('updated_at', { ascending: false })
@@ -170,7 +172,7 @@ function renderHistory(orders) {
     const detailItems = items.map(i => `
       <div class="history-detail-item">
         <span class="history-detail-item__qty">${i.quantity}×</span>
-        <span>${i.item_name}</span>
+        <span>${i.item_name}${i.order_item_modifiers?.length ? ` <span class="text-muted text-xs">(${modifiersSummary(i.order_item_modifiers.map(m => ({ option_name: m.option_name })))})</span>` : ''}</span>
       </div>`).join('')
 
     const noteHtml = o.notes

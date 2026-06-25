@@ -1,5 +1,6 @@
 import { supabase, getSession, getProfile, calcTotals, fmt } from '../../shared/supabase-client.js'
 import { toast } from './utils.js'
+import { getItemModifierGroups, openModifierModal, modifiersExtraPrice, modifiersSummary, buildLineKey } from '../../shared/modifier-modal.js'
 
 const params  = new URLSearchParams(location.search)
 const tableId = params.get('table')
@@ -105,9 +106,9 @@ function renderGrid() {
   }
 
   grid.innerHTML = filtered.map(i => {
-    const inCart = cart.find(c => c.id === i.id)
+    const cartQty = cart.filter(c => c.id === i.id).reduce((s, c) => s + c.qty, 0)
     return `
-      <div class="order-item-card ${inCart ? 'in-cart' : ''}"
+      <div class="order-item-card ${cartQty ? 'in-cart' : ''}"
            onclick="addToCart('${i.id}','${i.name.replace(/'/g, "\\'")}',${i.price})">
         <div class="order-item-img">
           ${i.image_url
@@ -119,8 +120,8 @@ function renderGrid() {
           ${i.description ? `<div class="order-item-desc">${i.description}</div>` : ''}
           <div class="order-item-footer">
             <span class="order-item-price">${fmt.currency(i.price)}</span>
-            <span class="order-item-add ${inCart ? 'in-cart' : ''}">
-              ${inCart ? `✓ ${inCart.qty}` : '+'}
+            <span class="order-item-add ${cartQty ? 'in-cart' : ''}">
+              ${cartQty ? `✓ ${cartQty}` : '+'}
             </span>
           </div>
         </div>
@@ -129,20 +130,32 @@ function renderGrid() {
 }
 
 // ─── Cart ──────────────────────────────────────────────────────────
-window.addToCart = (id, name, price) => {
-  const existing = cart.find(c => c.id === id)
-  existing ? existing.qty++ : cart.push({ id, name, price: parseFloat(price), qty: 1 })
+window.addToCart = async (id, name, price) => {
+  const item = { id, name, price: parseFloat(price) }
+  const groups = await getItemModifierGroups(id)
+  let modifiers = []
+  if (groups.length) {
+    const selections = await openModifierModal(item, groups)
+    if (selections === null) return
+    modifiers = selections
+  }
+
+  const lineKey = buildLineKey(id, modifiers)
+  const existing = cart.find(c => c.lineKey === lineKey)
+  if (existing) existing.qty++
+  else cart.push({ ...item, price: item.price + modifiersExtraPrice(modifiers), modifiers, lineKey, qty: 1 })
+
   renderGrid()
   renderDesktopCart()
   updateMobileBar()
   toast(`${name} agregado`, 'success', 1500)
 }
 
-window.changeQty = (id, delta) => {
-  const item = cart.find(c => c.id === id)
+window.changeQty = (lineKey, delta) => {
+  const item = cart.find(c => c.lineKey === lineKey)
   if (!item) return
   item.qty += delta
-  if (item.qty <= 0) cart = cart.filter(c => c.id !== id)
+  if (item.qty <= 0) cart = cart.filter(c => c.lineKey !== lineKey)
   renderGrid()
   renderDesktopCart()
   renderMobileCart()
@@ -159,11 +172,11 @@ function cartItemsHTML() {
   if (!cart.length) return '<p class="text-muted text-sm" style="padding:12px 0">Sin productos.</p>'
   return cart.map(c => `
     <div class="cart-item">
-      <span class="cart-item__name">${c.name}</span>
+      <span class="cart-item__name">${c.name}${c.modifiers?.length ? `<div class="text-xs text-muted">${modifiersSummary(c.modifiers)}</div>` : ''}</span>
       <div class="cart-item__qty">
-        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="changeQty('${c.id}',-1)">−</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="changeQty('${c.lineKey}',-1)">−</button>
         <span>${c.qty}</span>
-        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="changeQty('${c.id}',1)">+</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="changeQty('${c.lineKey}',1)">+</button>
       </div>
       <span class="cart-item__price">${fmt.currency(c.price * c.qty)}</span>
     </div>`).join('')
@@ -237,7 +250,7 @@ async function submitOrder(notesId, msgId, btnId) {
     return
   }
 
-  await supabase.from('order_items').insert(
+  const { data: insertedItems } = await supabase.from('order_items').insert(
     cart.map(c => ({
       order_id:     order.id,
       menu_item_id: c.id,
@@ -245,14 +258,22 @@ async function submitOrder(notesId, msgId, btnId) {
       item_price:   c.price,
       quantity:     c.qty
     }))
-  )
+  ).select()
+
+  const modifierRows = []
+  ;(insertedItems || []).forEach((row, idx) => {
+    (cart[idx].modifiers || []).forEach(m => {
+      modifierRows.push({ order_item_id: row.id, option_name: m.option_name, price_delta: m.price_delta })
+    })
+  })
+  if (modifierRows.length) await supabase.from('order_item_modifiers').insert(modifierRows)
 
   // Track this order
   myOrders.push({
     id:      order.id,
     shortId: order.id.slice(0, 8).toUpperCase(),
     status:  'in_kitchen',
-    items:   cart.map(c => ({ name: c.name, qty: c.qty, price: c.price })),
+    items:   cart.map(c => ({ name: c.name, qty: c.qty, price: c.price, modifiers: c.modifiers })),
     total,
     notes
   })
@@ -333,7 +354,7 @@ function renderTracker() {
           <span class="tracker-order-num">#${o.shortId}</span>
           <span class="tracker-status ${s.cls}">${s.icon} ${s.text}</span>
         </div>
-        <div class="tracker-items">${o.items.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div>
+        <div class="tracker-items">${o.items.map(i => `${i.qty}× ${i.name}${i.modifiers?.length ? ` (${modifiersSummary(i.modifiers)})` : ''}`).join('<br>')}</div>
         <div class="tracker-footer">
           ${o.notes ? `<span style="color:var(--text-secondary)">📝 ${o.notes}</span>` : '<span></span>'}
           <span class="tracker-total">${fmt.currency(o.total)}</span>

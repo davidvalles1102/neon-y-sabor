@@ -1,5 +1,6 @@
 import { supabase, fmt, calcTotals } from '../../shared/supabase-client.js'
 import { initAdminShell, toast } from './admin-auth.js'
+import { modifiersSummary } from '../../shared/modifier-modal.js'
 
 let allOrders  = []
 let typeFilter = 'all'   // 'all' | 'delivery' | 'takeout'
@@ -49,7 +50,7 @@ async function loadOrders() {
 
   const { data, error } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select('*, order_items(*, order_item_modifiers(*))')
     .in('order_type', ['delivery', 'takeout'])
     .not('delivery_status', 'eq', 'delivered')   // hide old delivered
     .gte('created_at', `${today}T00:00:00`)
@@ -146,7 +147,7 @@ function buildCard(order) {
         ${items.map(i => `
           <div class="delivery-card__item">
             <span class="kitchen-item__qty">${i.quantity}</span>
-            <span>${i.item_name}</span>
+            <span>${i.item_name}${i.order_item_modifiers?.length ? ` <span class="text-muted text-xs">(${modifiersSummary(i.order_item_modifiers.map(m => ({ option_name: m.option_name })))})</span>` : ''}</span>
           </div>`).join('')}
         ${order.notes ? `<div class="text-xs text-muted mt-4">📋 ${order.notes}</div>` : ''}
       </div>
@@ -217,7 +218,7 @@ function openDetail(id) {
         <h4 style="margin-bottom:10px">🧾 Items</h4>
         ${(o.order_items || []).map(i => `
           <div class="receipt__item text-sm" style="padding:5px 0;border-bottom:1px solid var(--border)">
-            <span>${i.quantity}x ${i.item_name}</span>
+            <span>${i.quantity}x ${i.item_name}${i.order_item_modifiers?.length ? `<br><span class="text-muted text-xs">${modifiersSummary(i.order_item_modifiers.map(m => ({ option_name: m.option_name })))}</span>` : ''}</span>
             <span>${fmt.currency(i.item_price * i.quantity)}</span>
           </div>`).join('')}
         ${o.notes ? `<div class="text-sm text-muted mt-8">📋 ${o.notes}</div>` : ''}

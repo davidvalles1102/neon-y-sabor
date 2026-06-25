@@ -40,6 +40,7 @@
     <h1 class="topbar__title">Gestión de Menú</h1>
     <div class="topbar__right">
       <button class="btn btn-primary btn-sm" id="addItemBtn">+ Agregar Platillo</button>
+      <button class="btn btn-outline btn-sm" id="manageModsBtn">Modificadores</button>
       <button class="btn btn-outline btn-sm" id="manageCatsBtn">Categorías</button>
     </div>
   </header>
@@ -103,6 +104,12 @@
             <span>Destacado ⭐</span>
           </label>
         </div>
+        <div class="form-group">
+          <label class="form-label">Variaciones (tamaño, extras, etc.)</label>
+          <div id="itemModGroups" class="flex-col gap-8" style="max-height:140px;overflow-y:auto;padding:8px;border:1px solid var(--border);border-radius:var(--r-md)">
+            <p class="text-muted text-sm">Sin grupos de modificadores creados. Usa "Modificadores" en la barra superior.</p>
+          </div>
+        </div>
         <div id="itemFormMsg" class="alert hidden"></div>
       </form>
     </div>
@@ -126,6 +133,48 @@
         <input type="text" id="newCatName"  class="form-control" placeholder="Nombre" style="flex:1">
         <input type="text" id="newCatIcon"  class="form-control" placeholder="Emoji" style="width:70px">
         <button type="submit" class="btn btn-primary">+ Agregar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modifier Groups Management Modal -->
+<div class="modal-backdrop hidden" id="modsModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3>Grupos de Modificadores</h3>
+      <button class="modal-close" id="modsModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modGroupsList" class="flex-col gap-16"></div>
+
+      <hr class="receipt__divider mt-16">
+
+      <h4 class="mt-16 mb-16">Nuevo grupo</h4>
+      <form id="addModGroupForm" class="flex-col gap-12">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" id="newModGroupName" class="form-control" placeholder="Ej: Tamaño de pan" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="newModGroupType" class="form-control">
+              <option value="single">Selección única</option>
+              <option value="multiple">Selección múltiple</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-16 items-center">
+          <label class="checkbox-label">
+            <input type="checkbox" id="newModGroupRequired">
+            <span>Obligatorio</span>
+          </label>
+          <div class="form-group hidden" style="flex:1" id="newModGroupMaxWrap">
+            <input type="number" id="newModGroupMax" class="form-control" placeholder="Máx. opciones (multiple)" min="1">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">+ Crear Grupo</button>
       </form>
     </div>
   </div>

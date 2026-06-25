@@ -1,5 +1,6 @@
 import { supabase, calcTotals, fmt } from '../../shared/supabase-client.js'
 import { initAdminShell, toast } from './admin-auth.js'
+import { getItemModifierGroups, openModifierModal, modifiersExtraPrice, modifiersSummary, buildLineKey } from '../../shared/modifier-modal.js'
 
 let profile      = null
 let categories   = []
@@ -127,13 +128,21 @@ function renderMenuGrid() {
   `).join('')
 
   grid.querySelectorAll('.pos-item-card').forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', async () => {
       if (!currentOrder) { toast(orderType === 'dine_in' ? 'Selecciona una mesa primero' : 'Crea una orden primero', 'warning'); return }
-      addItemToTicket({
+      const item = {
         id:    card.dataset.id,
         name:  card.dataset.name,
         price: parseFloat(card.dataset.price)
-      })
+      }
+      const groups = await getItemModifierGroups(item.id)
+      if (groups.length) {
+        const selections = await openModifierModal(item, groups)
+        if (selections === null) return
+        await addItemToTicket(item, selections)
+      } else {
+        await addItemToTicket(item)
+      }
     })
   })
 }
@@ -149,7 +158,7 @@ function setupTicket() {
     // Auto-cargar orden activa si existe (pedido via QR u otro mesero)
     const { data } = await supabase
       .from('orders')
-      .select('*, order_items(*)')
+      .select('*, order_items(*, order_item_modifiers(*))')
       .eq('table_id', selectedTable.id)
       .in('status', ['open', 'in_kitchen', 'ready', 'delivered'])
       .order('created_at', { ascending: false })
@@ -197,7 +206,7 @@ async function loadOrCreateOrder(forceNew = false) {
     // Solo buscar — nunca crear automáticamente al seleccionar una mesa
     const { data, error } = await supabase
       .from('orders')
-      .select('*, order_items(*)')
+      .select('*, order_items(*, order_item_modifiers(*))')
       .eq('table_id', selectedTable.id)
       .in('status', ['open', 'in_kitchen', 'ready', 'delivered'])
       .order('created_at', { ascending: false })
@@ -262,30 +271,44 @@ async function markTableOccupied(tableId) {
 }
 
 function mapItems(rawItems) {
-  return (rawItems || []).map(i => ({
-    dbId:  i.id,
-    id:    i.menu_item_id,
-    name:  i.item_name,
-    price: parseFloat(i.item_price),
-    qty:   i.quantity,
-    notes: i.notes || ''
-  }))
+  return (rawItems || []).map(i => {
+    const modifiers = (i.order_item_modifiers || []).map(m => ({ option_name: m.option_name, price_delta: parseFloat(m.price_delta) }))
+    return {
+      dbId:     i.id,
+      id:       i.menu_item_id,
+      name:     i.item_name,
+      price:    parseFloat(i.item_price),
+      qty:      i.quantity,
+      notes:    i.notes || '',
+      modifiers,
+      lineKey:  buildLineKey(i.menu_item_id, modifiers)
+    }
+  })
 }
 
-async function addItemToTicket(item) {
-  const existing = currentOrder.items.find(i => i.id === item.id)
+async function addItemToTicket(item, modifiers = []) {
+  const lineKey  = buildLineKey(item.id, modifiers)
+  const existing = currentOrder.items.find(i => i.lineKey === lineKey)
   if (existing) {
     existing.qty++
     await supabase.from('order_items').update({ quantity: existing.qty }).eq('id', existing.dbId)
   } else {
+    const unitPrice = item.price + modifiersExtraPrice(modifiers)
     const { data } = await supabase.from('order_items').insert({
       order_id:     currentOrder.id,
       menu_item_id: item.id,
       item_name:    item.name,
-      item_price:   item.price,
+      item_price:   unitPrice,
       quantity:     1
     }).select().single()
-    currentOrder.items.push({ dbId: data.id, ...item, qty: 1, notes: '' })
+
+    if (modifiers.length) {
+      await supabase.from('order_item_modifiers').insert(
+        modifiers.map(m => ({ order_item_id: data.id, option_name: m.option_name, price_delta: m.price_delta }))
+      )
+    }
+
+    currentOrder.items.push({ dbId: data.id, id: item.id, name: item.name, price: unitPrice, qty: 1, notes: '', modifiers, lineKey })
   }
   await recalcOrder()
   renderTicket()
@@ -327,7 +350,7 @@ function renderTicket() {
   } else {
     itemsEl.innerHTML = currentOrder.items.map(i => `
       <div class="ticket-item">
-        <span class="ticket-item__name">${i.name}</span>
+        <span class="ticket-item__name">${i.name}${i.modifiers?.length ? `<div class="text-xs text-muted">${modifiersSummary(i.modifiers)}</div>` : ''}</span>
         <div class="ticket-item__qty">
           <button class="qty-btn minus" onclick="changeQty('${i.dbId}', -1)">−</button>
           <span class="qty-num">${i.qty}</span>
@@ -575,7 +598,7 @@ function renderReceipt(receiptNo, change) {
       <div>${orderType === 'dine_in' ? `Mesa: ${selectedTable?.number ?? '—'}` : orderType === 'takeout' ? '🥡 Para Llevar' : '🛵 Domicilio'} | Mesero: ${profile.full_name}</div>
       <div>Recibo: ${receiptNo}</div>
       <hr class="receipt__divider">
-      ${items.map(i => `<div class="receipt__item"><span>${i.qty}x ${i.name}</span><span>${fmt.currency(i.price * i.qty)}</span></div>`).join('')}
+      ${items.map(i => `<div class="receipt__item"><span>${i.qty}x ${i.name}${i.modifiers?.length ? `<br><span style="font-size:.8em;opacity:.7">${modifiersSummary(i.modifiers)}</span>` : ''}</span><span>${fmt.currency(i.price * i.qty)}</span></div>`).join('')}
       <hr class="receipt__divider">
       <div class="receipt__item"><span>Subtotal</span><span>${fmt.currency(currentOrder?.subtotal ?? 0)}</span></div>
       <div class="receipt__item"><span>IVA 8%</span><span>${fmt.currency(currentOrder?.tax ?? 0)}</span></div>
@@ -652,7 +675,7 @@ function buildReceiptPDF(data) {
   y += 5; hr(true)
 
   data.items.forEach(item => {
-    const label = `${item.qty}× ${item.name}`
+    const label = item.modifiers?.length ? `${item.qty}× ${item.name} (${modifiersSummary(item.modifiers)})` : `${item.qty}× ${item.name}`
     const price = fmt.currency(item.price * item.qty)
     fnt(8.5, 'normal', 30, 30, 30)
     const lines = doc.splitTextToSize(label, 50)
@@ -715,7 +738,7 @@ function buildWhatsAppText(d) {
     : d.orderType === 'takeout' ? '🥡 Para Llevar' : '🛵 Domicilio'
 
   const itemLines = d.items
-    .map(i => `${i.qty}x ${i.name}  ${fmt.currency(i.price * i.qty)}`)
+    .map(i => `${i.qty}x ${i.name}${i.modifiers?.length ? ` (${modifiersSummary(i.modifiers)})` : ''}  ${fmt.currency(i.price * i.qty)}`)
     .join('\n')
 
   const cashLine = d.method === 'cash' && d.change > 0

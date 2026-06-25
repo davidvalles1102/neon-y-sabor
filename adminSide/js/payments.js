@@ -1,5 +1,6 @@
 import { supabase, fmt } from '../../shared/supabase-client.js'
 import { initAdminShell, toast } from './admin-auth.js'
+import { modifiersSummary } from '../../shared/modifier-modal.js'
 
 let allPayments     = []
 let filterDate      = new Date().toISOString().split('T')[0]
@@ -29,7 +30,7 @@ async function init() {
 async function loadPayments() {
   const { data, error } = await supabase
     .from('payments')
-    .select('*, orders(*, restaurant_tables(number), order_items(*)), profiles!payments_processed_by_fkey(full_name)')
+    .select('*, orders(*, restaurant_tables(number), order_items(*, order_item_modifiers(*))), profiles!payments_processed_by_fkey(full_name)')
     .gte('created_at', `${filterDate}T00:00:00`)
     .lte('created_at', `${filterDate}T23:59:59`)
     .order('created_at', { ascending: false })
@@ -156,7 +157,8 @@ function buildPaymentPDF(p) {
     doc.text('DESCRIPCIÓN', 5, y); doc.text('VALOR', W - 5, y, { align: 'right' })
     y += 5; hr(true)
     orderItems.forEach(item => {
-      const label = `${item.quantity}× ${item.item_name}`
+      const mods  = (item.order_item_modifiers || []).map(m => ({ option_name: m.option_name }))
+      const label = mods.length ? `${item.quantity}× ${item.item_name} (${modifiersSummary(mods)})` : `${item.quantity}× ${item.item_name}`
       const price = fmt.currency(item.item_price * item.quantity)
       fnt(8.5, 'normal', 30, 30, 30)
       const lines = doc.splitTextToSize(label, 50)

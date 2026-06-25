@@ -1,15 +1,16 @@
 import { supabase } from '../../shared/supabase-client.js'
 import { initAdminShell, toast } from './admin-auth.js'
 
-let categories = []
-let menuItems  = []
-let activeCat  = 'all'
-let editingId  = null
+let categories   = []
+let menuItems    = []
+let modGroups    = []   // [{ id, name, selection_type, required, max_select, modifier_options: [...] }]
+let activeCat    = 'all'
+let editingId    = null
 
 async function init() {
   const ctx = await initAdminShell(['admin'])
   if (!ctx) return
-  await Promise.all([loadCategories(), loadItems()])
+  await Promise.all([loadCategories(), loadItems(), loadModGroups()])
   setupModals()
 }
 
@@ -103,9 +104,19 @@ function setupModals() {
   })
   document.getElementById('catsModalClose').addEventListener('click', () => document.getElementById('catsModal').classList.add('hidden'))
   document.getElementById('addCatForm').addEventListener('submit', addCategory)
+
+  document.getElementById('manageModsBtn').addEventListener('click', () => {
+    renderModGroupsList()
+    document.getElementById('modsModal').classList.remove('hidden')
+  })
+  document.getElementById('modsModalClose').addEventListener('click', () => document.getElementById('modsModal').classList.add('hidden'))
+  document.getElementById('addModGroupForm').addEventListener('submit', addModGroup)
+  document.getElementById('newModGroupType').addEventListener('change', (e) => {
+    document.getElementById('newModGroupMaxWrap').classList.toggle('hidden', e.target.value !== 'multiple')
+  })
 }
 
-function openItemModal(item = null) {
+async function openItemModal(item = null) {
   editingId = item?.id ?? null
   document.getElementById('itemModalTitle').textContent = item ? 'Editar Platillo' : 'Nuevo Platillo'
   document.getElementById('itemId').value          = item?.id ?? ''
@@ -117,7 +128,29 @@ function openItemModal(item = null) {
   document.getElementById('itemAvailable').checked  = item?.available ?? true
   document.getElementById('itemFeatured').checked   = item?.is_featured ?? false
   document.getElementById('itemFormMsg').classList.add('hidden')
+
+  let assignedGroupIds = []
+  if (item) {
+    const { data } = await supabase.from('menu_item_modifier_groups').select('modifier_group_id').eq('menu_item_id', item.id)
+    assignedGroupIds = (data || []).map(r => r.modifier_group_id)
+  }
+  renderItemModGroups(assignedGroupIds)
+
   document.getElementById('itemModal').classList.remove('hidden')
+}
+
+function renderItemModGroups(assignedGroupIds = []) {
+  const el = document.getElementById('itemModGroups')
+  if (!modGroups.length) {
+    el.innerHTML = '<p class="text-muted text-sm">Sin grupos de modificadores creados. Usa "Modificadores" en la barra superior.</p>'
+    return
+  }
+  el.innerHTML = modGroups.map(g => `
+    <label class="checkbox-label" style="cursor:pointer">
+      <input type="checkbox" class="item-mod-group-cb" value="${g.id}" ${assignedGroupIds.includes(g.id) ? 'checked' : ''}>
+      <span>${g.name} <span class="text-muted text-xs">(${g.selection_type === 'single' ? 'única' : 'múltiple'}${g.required ? ', obligatorio' : ''})</span></span>
+    </label>
+  `).join('')
 }
 
 function closeItemModal() { document.getElementById('itemModal').classList.add('hidden') }
@@ -144,11 +177,13 @@ async function saveItem() {
     return
   }
 
-  let error
+  let error, itemId = editingId
   if (editingId) {
     ;({ error } = await supabase.from('menu_items').update(payload).eq('id', editingId))
   } else {
-    ;({ error } = await supabase.from('menu_items').insert(payload))
+    const { data, error: insertErr } = await supabase.from('menu_items').insert(payload).select().single()
+    error = insertErr
+    itemId = data?.id
   }
 
   if (error) {
@@ -156,6 +191,14 @@ async function saveItem() {
     msgEl.className = 'alert alert-error'
     msgEl.classList.remove('hidden')
     return
+  }
+
+  const selectedGroupIds = [...document.querySelectorAll('.item-mod-group-cb:checked')].map(cb => cb.value)
+  await supabase.from('menu_item_modifier_groups').delete().eq('menu_item_id', itemId)
+  if (selectedGroupIds.length) {
+    await supabase.from('menu_item_modifier_groups').insert(
+      selectedGroupIds.map(gid => ({ menu_item_id: itemId, modifier_group_id: gid }))
+    )
   }
 
   closeItemModal()
@@ -214,6 +257,109 @@ window.deleteCat = async (id) => {
   toast('Categoría eliminada')
   await loadCategories()
   renderCatList()
+}
+
+// ─── Modifier Groups management ────────────────────────────────────
+async function loadModGroups() {
+  const { data } = await supabase
+    .from('modifier_groups')
+    .select('*, modifier_options(*)')
+    .order('display_order')
+  modGroups = (data || []).map(g => ({
+    ...g,
+    modifier_options: [...(g.modifier_options || [])].sort((a, b) => a.display_order - b.display_order)
+  }))
+}
+
+function renderModGroupsList() {
+  const el = document.getElementById('modGroupsList')
+  if (!modGroups.length) {
+    el.innerHTML = '<p class="text-muted text-sm">Sin grupos creados todavía.</p>'
+    return
+  }
+  el.innerHTML = modGroups.map(g => `
+    <div class="card" style="padding:14px">
+      <div class="flex justify-between items-center">
+        <div>
+          <strong>${g.name}</strong>
+          <span class="text-muted text-xs"> — ${g.selection_type === 'single' ? 'Selección única' : 'Selección múltiple'}${g.required ? ', obligatorio' : ''}${g.max_select ? `, máx ${g.max_select}` : ''}</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteModGroup('${g.id}')">✕</button>
+      </div>
+      <div class="flex-col gap-4 mt-8">
+        ${g.modifier_options.map(o => `
+          <div class="flex justify-between items-center text-sm">
+            <span>${o.name}${o.is_default ? ' <span class="text-muted text-xs">(default)</span>' : ''}</span>
+            <span class="flex items-center gap-8">
+              <span class="text-muted">${+o.price_delta >= 0 ? '+' : ''}${(+o.price_delta).toFixed(2)}</span>
+              <button class="btn btn-ghost btn-sm" onclick="deleteModOption('${o.id}')">✕</button>
+            </span>
+          </div>
+        `).join('') || '<p class="text-muted text-xs">Sin opciones.</p>'}
+      </div>
+      <form class="flex gap-8 mt-8" onsubmit="return addModOption(event, '${g.id}')">
+        <input type="text" class="form-control" placeholder="Opción (ej: Doble)" style="flex:1" required>
+        <input type="number" class="form-control" placeholder="+/- $" step="0.01" style="width:90px" required>
+        <button type="submit" class="btn btn-outline btn-sm">+ Opción</button>
+      </form>
+    </div>
+  `).join('')
+}
+
+async function addModGroup(e) {
+  e.preventDefault()
+  const name     = document.getElementById('newModGroupName').value.trim()
+  const type     = document.getElementById('newModGroupType').value
+  const required = document.getElementById('newModGroupRequired').checked
+  const max      = document.getElementById('newModGroupMax').value
+  if (!name) return
+
+  const { error } = await supabase.from('modifier_groups').insert({
+    name,
+    selection_type: type,
+    required,
+    max_select: type === 'multiple' && max ? parseInt(max) : null,
+    display_order: modGroups.length
+  })
+  if (error) { toast('Error al crear grupo', 'error'); return }
+
+  toast('Grupo creado')
+  e.target.reset()
+  document.getElementById('newModGroupMaxWrap').classList.add('hidden')
+  await loadModGroups()
+  renderModGroupsList()
+}
+
+window.addModOption = (e, groupId) => {
+  e.preventDefault()
+  const form   = e.target
+  const name   = form.querySelector('input[type="text"]').value.trim()
+  const delta  = parseFloat(form.querySelector('input[type="number"]').value) || 0
+  if (!name) return
+
+  supabase.from('modifier_options').insert({ group_id: groupId, name, price_delta: delta })
+    .then(({ error }) => {
+      if (error) { toast('Error al agregar opción', 'error'); return }
+      toast('Opción agregada')
+      loadModGroups().then(renderModGroupsList)
+    })
+  return false
+}
+
+window.deleteModGroup = async (id) => {
+  if (!confirm('¿Eliminar este grupo y todas sus opciones? Se quitará de los platillos asignados.')) return
+  const { error } = await supabase.from('modifier_groups').delete().eq('id', id)
+  if (error) { toast('Error al eliminar', 'error'); return }
+  toast('Grupo eliminado')
+  await loadModGroups()
+  renderModGroupsList()
+}
+
+window.deleteModOption = async (id) => {
+  const { error } = await supabase.from('modifier_options').delete().eq('id', id)
+  if (error) { toast('Error al eliminar', 'error'); return }
+  await loadModGroups()
+  renderModGroupsList()
 }
 
 init()
