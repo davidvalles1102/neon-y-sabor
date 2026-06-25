@@ -11,6 +11,9 @@ let selectedTable= null
 let activeCat    = 'all'
 let selectedPayMethod = 'cash'
 let linkedCustomer    = null
+let pointsToRedeem    = 0
+const POINT_VALUE        = 0.01   // $ por punto
+const MAX_REDEEM_PERCENT = 0.5    // máximo % del total que se puede pagar con puntos
 let orderType         = 'dine_in'   // 'dine_in' | 'takeout' | 'delivery'
 let lastReceiptData   = null        // snapshot para WhatsApp
 
@@ -479,19 +482,64 @@ function setupPayModal() {
 
   // Customer search
   document.getElementById('payCustomerSearch').addEventListener('input', searchCustomers)
+
+  // Redeem points
+  document.getElementById('redeemPointsInput').addEventListener('input', (e) => {
+    setPointsToRedeem(parseInt(e.target.value) || 0)
+  })
+  document.getElementById('redeemMaxBtn').addEventListener('click', () => {
+    setPointsToRedeem(maxRedeemablePoints())
+  })
+}
+
+function maxRedeemablePoints() {
+  if (!linkedCustomer || !currentOrder) return 0
+  const capByOrder = Math.floor((currentOrder.total * MAX_REDEEM_PERCENT) / POINT_VALUE)
+  return Math.max(0, Math.min(linkedCustomer.points, capByOrder))
+}
+
+function effectiveTotal() {
+  const discount = pointsToRedeem * POINT_VALUE
+  return Math.max(0, (currentOrder?.total || 0) - discount)
+}
+
+function setPointsToRedeem(pts) {
+  const max = maxRedeemablePoints()
+  pointsToRedeem = Math.max(0, Math.min(pts || 0, max))
+  document.getElementById('redeemPointsInput').value = pointsToRedeem || ''
+  document.getElementById('payTotalAmount').textContent = fmt.currency(effectiveTotal())
+  document.getElementById('redeemSummary').textContent = pointsToRedeem > 0
+    ? `Descuento: -${fmt.currency(pointsToRedeem * POINT_VALUE)} → Total: ${fmt.currency(effectiveTotal())}`
+    : ''
+  updateChange()
+}
+
+function renderRedeemBox() {
+  const box = document.getElementById('redeemPointsBox')
+  if (!linkedCustomer) { box.classList.add('hidden'); return }
+  box.classList.remove('hidden')
+  document.getElementById('redeemAvailablePts').textContent   = linkedCustomer.points
+  document.getElementById('redeemAvailableValue').textContent = fmt.currency(linkedCustomer.points * POINT_VALUE)
+  document.getElementById('redeemPointsInput').max = maxRedeemablePoints()
 }
 
 function openPayModal() {
   if (!currentOrder?.items.length) return
+  pointsToRedeem = 0
   document.getElementById('payTotalAmount').textContent = fmt.currency(currentOrder.total)
   document.getElementById('payModal').classList.remove('hidden')
   document.getElementById('cashReceived').value = ''
   document.getElementById('changeAmount').textContent = '$0.00'
+  document.getElementById('redeemPointsInput').value = ''
+  document.getElementById('redeemSummary').textContent = ''
+  document.getElementById('payCustomerSearch').value = ''
+  linkedCustomer = null
+  renderRedeemBox()
 }
 
 function updateChange() {
   const received = parseFloat(document.getElementById('cashReceived').value) || 0
-  const change   = Math.max(0, received - (currentOrder?.total || 0))
+  const change   = Math.max(0, received - effectiveTotal())
   document.getElementById('changeAmount').textContent = fmt.currency(change)
 }
 
@@ -520,6 +568,12 @@ async function searchCustomers() {
       linkedCustomer = { id: el.dataset.id, name: el.dataset.name, points: parseInt(el.dataset.points) }
       document.getElementById('payCustomerSearch').value = el.dataset.name
       suggestEl.style.display = 'none'
+      pointsToRedeem = 0
+      document.getElementById('redeemPointsInput').value = ''
+      document.getElementById('redeemSummary').textContent = ''
+      document.getElementById('payTotalAmount').textContent = fmt.currency(currentOrder.total)
+      renderRedeemBox()
+      updateChange()
     })
   })
 }
@@ -529,14 +583,17 @@ async function processPayment() {
   const btn = document.getElementById('confirmPayBtn')
   btn.disabled = true
 
-  const received = parseFloat(document.getElementById('cashReceived').value) || currentOrder.total
-  const change   = Math.max(0, received - currentOrder.total)
+  const chargeTotal = effectiveTotal()
+  const received = parseFloat(document.getElementById('cashReceived').value) || chargeTotal
+  const change   = Math.max(0, received - chargeTotal)
   const receipt  = `REC-${Date.now()}`
+  const redeemedPts   = pointsToRedeem
+  const redeemedValue = redeemedPts * POINT_VALUE
 
   const { error: payErr } = await supabase.from('payments').insert({
     order_id:      currentOrder.id,
     processed_by:  profile.id,
-    amount:        currentOrder.total,
+    amount:        chargeTotal,
     method:        selectedPayMethod,
     receipt_number:receipt,
     change_amount: change
@@ -551,28 +608,44 @@ async function processPayment() {
     if (t) t.status = 'available'
   }
 
-  // Award loyalty points (1 pt per $1 spent)
+  let earnedPts = 0
   if (linkedCustomer) {
-    const pts = Math.floor(currentOrder.total)
-    await supabase.from('loyalty_transactions').insert({ customer_id: linkedCustomer.id, order_id: currentOrder.id, points: pts, type: 'earned' })
-    await supabase.from('profiles').update({ loyalty_points: linkedCustomer.points + pts }).eq('id', linkedCustomer.id)
+    let newBalance = linkedCustomer.points
+
+    // Canjear puntos (si aplica) — se descuentan primero
+    if (redeemedPts > 0) {
+      await supabase.from('loyalty_transactions').insert({ customer_id: linkedCustomer.id, order_id: currentOrder.id, points: redeemedPts, type: 'redeemed' })
+      newBalance -= redeemedPts
+    }
+
+    // Otorgar puntos por lo efectivamente pagado (no sobre el monto cubierto con puntos)
+    earnedPts = Math.floor(chargeTotal)
+    if (earnedPts > 0) {
+      await supabase.from('loyalty_transactions').insert({ customer_id: linkedCustomer.id, order_id: currentOrder.id, points: earnedPts, type: 'earned' })
+      newBalance += earnedPts
+    }
+
+    await supabase.from('profiles').update({ loyalty_points: Math.max(0, newBalance) }).eq('id', linkedCustomer.id)
   }
 
   document.getElementById('payModal').classList.add('hidden')
-  renderReceipt(receipt, change)
+  renderReceipt(receipt, change, { redeemedPts, redeemedValue, earnedPts })
   toast('Pago procesado ✓', 'success')
 
   currentOrder  = null
   selectedTable = null
   linkedCustomer= null
+  pointsToRedeem= 0
   document.getElementById('tablePicker').value = ''
   renderTablePicker()
   renderTicket()
   btn.disabled = false
 }
 
-function renderReceipt(receiptNo, change) {
+function renderReceipt(receiptNo, change, redeemInfo = {}) {
   const items = currentOrder?.items ?? []
+  const { redeemedPts = 0, redeemedValue = 0, earnedPts = 0 } = redeemInfo
+  const chargeTotal = (currentOrder?.total ?? 0) - redeemedValue
 
   // ── Guardar snapshot para WhatsApp ───────────────────────────────
   lastReceiptData = {
@@ -583,6 +656,11 @@ function renderReceipt(receiptNo, change) {
     subtotal: currentOrder?.subtotal ?? 0,
     tax:      currentOrder?.tax      ?? 0,
     total:    currentOrder?.total    ?? 0,
+    chargeTotal,
+    redeemedPts,
+    redeemedValue,
+    earnedPts,
+    customerName: linkedCustomer?.name ?? null,
     method:   selectedPayMethod,
     orderType,
     tableNum: selectedTable?.number  ?? null,
@@ -602,12 +680,13 @@ function renderReceipt(receiptNo, change) {
       <hr class="receipt__divider">
       <div class="receipt__item"><span>Subtotal</span><span>${fmt.currency(currentOrder?.subtotal ?? 0)}</span></div>
       <div class="receipt__item"><span>IVA 8%</span><span>${fmt.currency(currentOrder?.tax ?? 0)}</span></div>
-      <div class="receipt__item receipt__total"><span>TOTAL</span><span>${fmt.currency(currentOrder?.total ?? 0)}</span></div>
+      ${redeemedPts > 0 ? `<div class="receipt__item"><span>Puntos canjeados (-${redeemedPts} pts)</span><span>-${fmt.currency(redeemedValue)}</span></div>` : ''}
+      <div class="receipt__item receipt__total"><span>TOTAL</span><span>${fmt.currency(chargeTotal)}</span></div>
       ${selectedPayMethod === 'cash' ? `
         <div class="receipt__item"><span>Efectivo</span><span>${fmt.currency(parseFloat(document.getElementById('cashReceived').value)||0)}</span></div>
         <div class="receipt__item"><span>Cambio</span><span>${fmt.currency(change)}</span></div>
       ` : `<div class="receipt__item"><span>Método</span><span>${selectedPayMethod}</span></div>`}
-      ${linkedCustomer ? `<div style="margin-top:6px">Puntos otorgados: +${Math.floor(currentOrder?.total??0)} pts a ${linkedCustomer.name}</div>` : ''}
+      ${linkedCustomer ? `<div style="margin-top:6px">Puntos otorgados: +${earnedPts} pts a ${linkedCustomer.name}</div>` : ''}
       <hr class="receipt__divider">
       <div class="receipt__thanks">¡Gracias por su visita!<br>Vuelva pronto 🌟</div>
     </div>`
@@ -690,9 +769,10 @@ function buildReceiptPDF(data) {
   // ── Totals ────────────────────────────────────────────────────
   row2('Subtotal', fmt.currency(data.subtotal), 8.5)
   row2('IVA (8%)', fmt.currency(data.tax),      8.5)
+  if (data.redeemedPts > 0) row2(`Puntos canjeados (-${data.redeemedPts} pts)`, `-${fmt.currency(data.redeemedValue)}`, 8.5)
   y += 1
   doc.setFillColor(245, 245, 245); doc.rect(3, y - 3.5, W - 6, 9.5, 'F')
-  row2('TOTAL', fmt.currency(data.total), 12, true)
+  row2('TOTAL', fmt.currency(data.chargeTotal ?? data.total), 12, true)
   y += 2; hr()
 
   // ── Payment ───────────────────────────────────────────────────
@@ -702,6 +782,7 @@ function buildReceiptPDF(data) {
     row2('Efectivo recibido:', fmt.currency(data.cashIn), 8)
     row2('Cambio:',            fmt.currency(data.change), 8)
   }
+  if (data.customerName && data.earnedPts > 0) row2('Puntos otorgados:', `+${data.earnedPts} pts`, 8)
   hr()
 
   // ── Footer ────────────────────────────────────────────────────
@@ -745,6 +826,9 @@ function buildWhatsAppText(d) {
     ? `\nCambio: ${fmt.currency(d.change)}`
     : ''
 
+  const redeemLine = d.redeemedPts > 0 ? `Puntos canjeados (-${d.redeemedPts} pts): -${fmt.currency(d.redeemedValue)}\n` : ''
+  const earnedLine = d.customerName && d.earnedPts > 0 ? `\nPuntos otorgados: +${d.earnedPts} pts a ${d.customerName}` : ''
+
   return [
     `🍽️ *Neón y Sabor Mi Rancho*`,
     `Recibo: ${d.receiptNo}`,
@@ -755,8 +839,8 @@ function buildWhatsAppText(d) {
     `─────────────────────`,
     `Subtotal: ${fmt.currency(d.subtotal)}`,
     `IVA 8%:   ${fmt.currency(d.tax)}`,
-    `*TOTAL: ${fmt.currency(d.total)}*`,
-    `Método: ${methodLabels[d.method] ?? d.method}${cashLine}`,
+    `${redeemLine}*TOTAL: ${fmt.currency(d.chargeTotal ?? d.total)}*`,
+    `Método: ${methodLabels[d.method] ?? d.method}${cashLine}${earnedLine}`,
     `─────────────────────`,
     `¡Gracias por su visita! 🌟`
   ].join('\n')

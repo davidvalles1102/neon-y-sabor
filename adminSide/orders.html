@@ -168,6 +168,18 @@
         <input type="text" id="payCustomerSearch" class="form-control" placeholder="Nombre o correo para puntos de lealtad...">
         <div id="customerSuggestions" class="suggestions-list"></div>
       </div>
+
+      <!-- Redeem points (solo visible con cliente vinculado) -->
+      <div class="form-group mt-16 hidden" id="redeemPointsBox" style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md);padding:12px">
+        <div class="flex justify-between items-center">
+          <span class="text-sm">Saldo: <strong id="redeemAvailablePts">0</strong> pts (<span id="redeemAvailableValue">$0.00</span>)</span>
+          <button class="btn btn-outline btn-sm" id="redeemMaxBtn">Usar máximo (50%)</button>
+        </div>
+        <div class="flex gap-8 mt-8">
+          <input type="number" id="redeemPointsInput" class="form-control" placeholder="Puntos a canjear" min="0" step="1">
+        </div>
+        <div class="text-sm mt-8" id="redeemSummary"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" id="payCancel">Cancelar</button>
