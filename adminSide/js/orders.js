@@ -389,7 +389,7 @@ async function sendToKitchen() {
   if (!currentOrder) return
   const notes = document.getElementById('orderNotes').value.trim()
   const update = { status: 'in_kitchen', notes }
-  if (orderType !== 'dine_in') update.delivery_status = 'preparing'
+  if (orderType !== 'dine_in') update.delivery_status = 'pending'
   const { error } = await supabase.from('orders').update(update).eq('id', currentOrder.id)
   if (error) { toast('Error al enviar a cocina', 'error'); return }
   toast('Orden enviada a cocina 👨‍🍳', 'success')
@@ -670,7 +670,7 @@ function renderReceipt(receiptNo, change, redeemInfo = {}) {
 
   document.getElementById('receiptContent').innerHTML = `
     <div class="receipt">
-      <div class="receipt__logo">Neón y Sabor Mi Rancho</div>
+      <div class="receipt__logo">CRUNCHIES</div>
       <div class="receipt__address">Su restaurante favorito<br>${fmt.datetime(new Date())}</div>
       <hr class="receipt__divider">
       <div>${orderType === 'dine_in' ? `Mesa: ${selectedTable?.number ?? '—'}` : orderType === 'takeout' ? '🥡 Para Llevar' : '🛵 Domicilio'} | Mesero: ${profile.full_name}</div>
@@ -733,9 +733,9 @@ function buildReceiptPDF(data) {
 
   // ── Restaurant name ───────────────────────────────────────────
   fnt(15, 'bold', 20, 20, 20)
-  ctr('NEÓN Y SABOR', 15, true)
+  ctr('CRUNCHIES', 15, true)
   fnt(8.5, 'normal', 100, 100, 100)
-  ctr('MI RANCHO', 8.5)
+  ctr('Restaurante & Delivery', 8.5)
   y += 1; hr()
 
   // ── Meta ──────────────────────────────────────────────────────
@@ -788,7 +788,7 @@ function buildReceiptPDF(data) {
   // ── Footer ────────────────────────────────────────────────────
   y += 2
   fnt(10, 'bold', 30, 30, 30); ctr('¡Gracias por su visita!', 10, true)
-  fnt(7.5, 'normal', 150, 150, 150); ctr('neon-y-sabor.vercel.app', 7.5)
+  fnt(7.5, 'normal', 150, 150, 150); ctr('crunchies.vercel.app', 7.5)
 
   // ── Bottom green bar ──────────────────────────────────────────
   doc.setFillColor(37, 211, 102)
@@ -830,7 +830,7 @@ function buildWhatsAppText(d) {
   const earnedLine = d.customerName && d.earnedPts > 0 ? `\nPuntos otorgados: +${d.earnedPts} pts a ${d.customerName}` : ''
 
   return [
-    `🍽️ *Neón y Sabor Mi Rancho*`,
+    `🍗 *CRUNCHIES*`,
     `Recibo: ${d.receiptNo}`,
     `📅 ${fmt.datetime(d.date)}`,
     locationLine,

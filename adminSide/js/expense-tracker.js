@@ -44,10 +44,15 @@ async function loadExpenses() {
 
   const { data, error } = await supabase
     .from('expenses')
-    .select('*, profiles!expenses_registered_by_fkey(full_name)')
+    .select('*')
     .gte('expense_date', since)
     .order('expense_date', { ascending: false })
 
+  if (error && error.code === '42P01') {
+    document.getElementById('expensesTableBody').innerHTML =
+      '<tr><td colspan="7" style="padding:32px;text-align:center;color:var(--amber)">⚠️ La tabla de gastos no existe aún. Ejecuta <strong>supabase/expenses_create.sql</strong> en Supabase SQL Editor.</td></tr>'
+    return
+  }
   if (error) { toast('Error al cargar gastos', 'error'); return }
   allExpenses = data || []
   renderStats()
@@ -239,19 +244,19 @@ function chartOptions(prefix = '') {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1e1e1e',
-        borderColor: '#2e2e2e',
+        backgroundColor: '#261510',
+        borderColor: '#3A1913',
         borderWidth: 1,
-        titleColor: '#F2ECD8',
-        bodyColor: '#9E9080',
+        titleColor: '#FFFFFF',
+        bodyColor: '#BFA099',
         callbacks: {
           label: (ctx) => ` ${prefix}${(+ctx.parsed.y || +ctx.parsed).toFixed(2)}`
         }
       }
     },
     scales: {
-      x: { ticks: { color: '#5A5045', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-      y: { ticks: { color: '#5A5045', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      x: { ticks: { color: '#7A5248', font: { size: 11 } }, grid: { color: 'rgba(255,150,80,0.05)' } },
+      y: { ticks: { color: '#7A5248', font: { size: 11 } }, grid: { color: 'rgba(255,150,80,0.05)' } }
     }
   }
 }

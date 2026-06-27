@@ -87,7 +87,7 @@ window.showReceipt = (payId) => {
 
   document.getElementById('receiptContent').innerHTML = `
     <div class="receipt">
-      <div class="receipt__logo">Neón y Sabor Mi Rancho</div>
+      <div class="receipt__logo">CRUNCHIES</div>
       <div class="receipt__address">${fmt.datetime(p.created_at)}</div>
       <hr class="receipt__divider">
       <div>Recibo: ${p.receipt_number}</div>
@@ -140,8 +140,8 @@ function buildPaymentPDF(p) {
   y = 11
 
   // Header
-  fnt(15, 'bold', 20, 20, 20); ctr('NEÓN Y SABOR', 15, true)
-  fnt(8.5, 'normal', 100, 100, 100); ctr('MI RANCHO', 8.5)
+  fnt(15, 'bold', 20, 20, 20); ctr('CRUNCHIES', 15, true)
+  fnt(8.5, 'normal', 100, 100, 100); ctr('Restaurante & Delivery', 8.5)
   y += 1; hr()
 
   // Meta
@@ -186,7 +186,7 @@ function buildPaymentPDF(p) {
   // Footer
   y += 2
   fnt(10, 'bold', 30, 30, 30); ctr('¡Gracias por su visita!', 10, true)
-  fnt(7.5, 'normal', 150, 150, 150); ctr('neon-y-sabor.vercel.app', 7.5)
+  fnt(7.5, 'normal', 150, 150, 150); ctr('crunchies.vercel.app', 7.5)
 
   doc.setFillColor(37, 211, 102); doc.rect(0, pageH - 3.5, W, 3.5, 'F')
   return doc
@@ -214,7 +214,7 @@ function buildWhatsAppText(p) {
     ? orderItems.map(i => `${i.quantity}x ${i.item_name}  ${fmt.currency(i.item_price * i.quantity)}`).join('\n') + '\n─────────────────────'
     : ''
   return [
-    `🍽️ *Neón y Sabor Mi Rancho*`,
+    `🍗 *CRUNCHIES*`,
     `Recibo: ${p.receipt_number}`,
     `📅 ${fmt.datetime(p.created_at)}`,
     `Mesa: ${p.orders?.restaurant_tables?.number ?? '—'}`,

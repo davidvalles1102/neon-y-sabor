@@ -108,11 +108,11 @@ function renderDailySalesChart(orders) {
       datasets: [{
         label: 'Ventas ($)',
         data: values,
-        borderColor: '#39FF14',
-        backgroundColor: 'rgba(57,255,20,0.08)',
+        borderColor: '#FF6600',
+        backgroundColor: 'rgba(255,102,0,0.08)',
         tension: 0.4,
         fill: true,
-        pointBackgroundColor: '#39FF14',
+        pointBackgroundColor: '#FF6600',
         pointRadius: 4
       }]
     },
@@ -140,15 +140,15 @@ function renderPaymentPieChart(payments, orders) {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: ['#39FF14', '#FFB300', '#00BFFF', '#FF3B3B'],
-        borderColor: '#161616',
+        backgroundColor: ['#FF6600', '#FF9900', '#4A9EE0', '#FF4455'],
+        borderColor: '#1E1210',
         borderWidth: 2
       }]
     },
     options: {
       ...chartOptions(),
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#9E9080', padding: 14, font: { size: 12 } } }
+        legend: { position: 'bottom', labels: { color: '#7A5248', padding: 14, font: { size: 12 } } }
       }
     }
   })
@@ -172,8 +172,8 @@ function renderCategoryChart(orderItems) {
       datasets: [{
         label: 'Ventas ($)',
         data: values,
-        backgroundColor: 'rgba(255,179,0,0.7)',
-        borderColor: '#FFB300',
+        backgroundColor: 'rgba(255,153,0,0.65)',
+        borderColor: '#FF9900',
         borderWidth: 1,
         borderRadius: 6
       }]
@@ -197,8 +197,8 @@ function renderExpenseCategoryChart(expenses) {
       datasets: [{
         label: 'Gastos ($)',
         data: values,
-        backgroundColor: 'rgba(255,59,59,0.7)',
-        borderColor: '#FF3B3B',
+        backgroundColor: 'rgba(255,68,85,0.65)',
+        borderColor: '#FF4455',
         borderWidth: 1,
         borderRadius: 6
       }]
@@ -230,21 +230,21 @@ function renderProfitChart(orders, expenses) {
         {
           label: 'Ingresos',
           data: revenueValues,
-          borderColor: '#39FF14',
-          backgroundColor: 'rgba(57,255,20,0.08)',
+          borderColor: '#FF6600',
+          backgroundColor: 'rgba(255,102,0,0.08)',
           tension: 0.4,
           fill: true,
-          pointBackgroundColor: '#39FF14',
+          pointBackgroundColor: '#FF6600',
           pointRadius: 3
         },
         {
           label: 'Gastos',
           data: expenseValues,
-          borderColor: '#FF3B3B',
-          backgroundColor: 'rgba(255,59,59,0.08)',
+          borderColor: '#FF4455',
+          backgroundColor: 'rgba(255,68,85,0.08)',
           tension: 0.4,
           fill: true,
-          pointBackgroundColor: '#FF3B3B',
+          pointBackgroundColor: '#FF4455',
           pointRadius: 3
         }
       ]
@@ -253,7 +253,7 @@ function renderProfitChart(orders, expenses) {
       ...chartOptions('$'),
       plugins: {
         ...chartOptions('$').plugins,
-        legend: { display: true, labels: { color: '#9E9080', font: { size: 11 } } }
+        legend: { display: true, labels: { color: '#7A5248', font: { size: 11 } } }
       }
     }
   })
@@ -281,8 +281,10 @@ function renderTopItems(orderItems) {
   `).join('')
 }
 
+const STATUS_ES = { open: 'Abierta', in_kitchen: 'En Cocina', ready: 'Lista', delivered: 'Entregada', paid: 'Pagada', cancelled: 'Cancelada' }
+
 function renderOrdersTable(orders) {
-  const statusCls = { paid: 'badge-green', cancelled: 'badge-danger', open: 'badge-amber' }
+  const statusCls = { paid: 'badge-green', cancelled: 'badge-danger', open: 'badge-amber', in_kitchen: 'badge-info', ready: 'badge-green', delivered: 'badge-muted' }
   const tbody = document.getElementById('ordersReportBody')
 
   if (!orders?.length) {
@@ -304,7 +306,7 @@ function renderOrdersTable(orders) {
       <td>${who}</td>
       <td>${o.delivery_phone ?? '—'}</td>
       <td class="neon-amber" style="font-weight:700">${fmt.currency(o.total)}</td>
-      <td><span class="badge ${statusCls[o.status] ?? 'badge-muted'}">${o.status}</span></td>
+      <td><span class="badge ${statusCls[o.status] ?? 'badge-muted'}">${STATUS_ES[o.status] ?? o.status}</span></td>
     </tr>`
   }).join('')
 }
@@ -339,19 +341,19 @@ function chartOptions(prefix = '') {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1e1e1e',
-        borderColor: '#2e2e2e',
+        backgroundColor: '#261510',
+        borderColor: '#3A1913',
         borderWidth: 1,
-        titleColor: '#F2ECD8',
-        bodyColor: '#9E9080',
+        titleColor: '#FFFFFF',
+        bodyColor: '#BFA099',
         callbacks: {
           label: (ctx) => ` ${prefix}${(+ctx.parsed.y || +ctx.parsed).toFixed(2)}`
         }
       }
     },
     scales: {
-      x: { ticks: { color: '#5A5045', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-      y: { ticks: { color: '#5A5045', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      x: { ticks: { color: '#7A5248', font: { size: 11 } }, grid: { color: 'rgba(255,150,80,0.05)' } },
+      y: { ticks: { color: '#7A5248', font: { size: 11 } }, grid: { color: 'rgba(255,150,80,0.05)' } }
     }
   }
 }

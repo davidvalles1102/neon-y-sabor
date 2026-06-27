@@ -1,6 +1,6 @@
 /* ================================================================
    Admin / Staff Panel — Styles
-   Neón y Sabor Mi Rancho
+   Crunchies
    ================================================================ */
 
 /* ─── Layout Shell ───────────────────────────────────────────── */
@@ -43,12 +43,13 @@
 
 .sidebar__brand {
   font-family: var(--font-d);
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  padding: 20px 20px 16px;
+  font-size: 1.7rem;
+  font-weight: 400;
+  letter-spacing: .10em;
+  padding: 22px 20px 18px;
   border-bottom: 1px solid var(--border);
   text-align: center;
+  color: var(--green);
 }
 
 .sidebar__nav {
@@ -134,8 +135,9 @@
 
 .topbar__title {
   font-family: var(--font-d);
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: .06em;
   flex: 1;
 }
 
@@ -146,22 +148,19 @@
 }
 
 .live-clock {
-  font-family: var(--font-d);
-  font-size: 1rem;
+  font-family: var(--font);
+  font-size: .92rem;
   font-weight: 600;
-  color: var(--green);
-  text-shadow: var(--glow-green-s);
-  letter-spacing: .05em;
+  color: var(--text-muted);
+  letter-spacing: .04em;
 }
 
 /* ─── Stats Grid ─────────────────────────────────────────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
   gap: 16px;
 }
-@media (max-width: 1000px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width:  520px) { .stats-grid { grid-template-columns: 1fr; } }
 
 /* ─── Charts Grid ────────────────────────────────────────────── */
 .charts-grid {
@@ -285,8 +284,8 @@
 .pos-item-card:active { transform: scale(.97); }
 .pos-item-card--unavail { opacity: .35; pointer-events: none; }
 
-.pos-item-name  { font-size: .88rem; font-weight: 600; line-height: 1.3; }
-.pos-item-price { font-family: var(--font-d); font-size: 1.05rem; font-weight: 700; color: var(--amber); margin-top: auto; }
+.pos-item-name  { font-size: .86rem; font-weight: 600; line-height: 1.3; }
+.pos-item-price { font-family: var(--font); font-size: 1rem; font-weight: 700; color: var(--amber); margin-top: auto; }
 
 /* ── Ticket Panel (POS right) ── */
 .pos-ticket-panel {
@@ -304,7 +303,7 @@
   align-items: center;
   flex-shrink: 0;
 }
-.ticket-table  { font-family: var(--font-d); font-size: 1.1rem; font-weight: 700; }
+.ticket-table  { font-family: var(--font-d); font-size: 1.15rem; font-weight: 400; letter-spacing: .06em; color: var(--green); }
 .ticket-waiter { }
 
 .ticket-items {
@@ -354,7 +353,7 @@
 .qty-btn:hover { border-color: var(--green); color: var(--green); }
 .qty-btn.minus:hover { border-color: var(--danger); color: var(--danger); }
 .qty-num { font-weight: 700; min-width: 20px; text-align: center; font-size: .9rem; }
-.ticket-item__price { font-family: var(--font-d); font-size: .95rem; font-weight: 700; color: var(--amber); min-width: 60px; text-align: right; }
+.ticket-item__price { font-family: var(--font); font-size: .92rem; font-weight: 700; color: var(--amber); min-width: 60px; text-align: right; }
 .ticket-item__del { color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 4px; }
 .ticket-item__del:hover { color: var(--danger); }
 
@@ -398,8 +397,8 @@
 
 /* ─── Payment Modal ──────────────────────────────────────────── */
 .pay-summary { text-align: center; padding: 8px 0; }
-.pay-total-label  { font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); }
-.pay-total-amount { font-family: var(--font-d); font-size: 2.5rem; font-weight: 700; text-shadow: var(--glow-green-s); }
+.pay-total-label  { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--text-muted); }
+.pay-total-amount { font-family: var(--font); font-size: 2.4rem; font-weight: 700; color: var(--green); }
 
 .pay-methods {
   display: grid;
@@ -454,7 +453,7 @@
   top: 0;
   z-index: 100;
 }
-.kitchen-brand { font-family: var(--font-d); font-size: 1.1rem; font-weight: 700; }
+.kitchen-brand { font-family: var(--font-d); font-size: 1.2rem; font-weight: 400; letter-spacing: .08em; color: var(--green); }
 .kitchen-topbar__right { display: flex; align-items: center; gap: 16px; }
 
 .kitchen-layout {
@@ -506,8 +505,8 @@
   background: var(--bg-3);
   border-bottom: 1px solid var(--border);
 }
-.kitchen-card__table { font-family: var(--font-d); font-size: 1.3rem; font-weight: 700; }
-.kitchen-card__timer { font-family: var(--font-d); font-size: .95rem; font-weight: 600; }
+.kitchen-card__table { font-family: var(--font-d); font-size: 1.4rem; font-weight: 400; letter-spacing: .06em; }
+.kitchen-card__timer { font-family: var(--font); font-size: .88rem; font-weight: 700; }
 .timer--ok     { color: var(--green); }
 .timer--warn   { color: var(--amber); }
 .timer--urgent { color: var(--danger); }
@@ -564,11 +563,11 @@
   gap: 12px;
 }
 .kitchen-history__title {
-  font-family: var(--font-d);
-  font-size: .88rem;
+  font-family: var(--font);
+  font-size: .72rem;
   font-weight: 700;
-  letter-spacing: .07em;
-  color: var(--text-secondary);
+  letter-spacing: .10em;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -661,7 +660,7 @@
   color: var(--text-secondary);
 }
 .history-detail-item__qty {
-  font-family: var(--font-d);
+  font-family: var(--font);
   font-weight: 700;
   color: var(--amber);
   font-size: .82rem;
@@ -691,20 +690,20 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(57,255,20,.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57,255,20,.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(255, 102, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 102, 0, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 .login-glow {
   position: absolute;
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: .1;
+  filter: blur(120px);
+  opacity: .08;
 }
-.login-glow--green { top: -150px; right: -100px; background: var(--green); }
-.login-glow--amber { bottom: -150px; left: -100px; background: var(--amber); }
+.login-glow--green { top: -200px; right: -150px; background: var(--green); }
+.login-glow--amber { bottom: -200px; left: -150px; background: var(--amber); }
 
 .login-card {
   position: relative;
@@ -719,12 +718,13 @@
 }
 .login-logo {
   font-family: var(--font-d);
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 400;
   text-align: center;
   margin-bottom: 32px;
-  line-height: 1.4;
-  letter-spacing: .04em;
+  line-height: 1.2;
+  letter-spacing: .10em;
+  color: var(--green);
 }
 
 /* ─── Menu Management Grid ───────────────────────────────────── */
@@ -757,7 +757,7 @@
 .mgmt-card__body { padding: 12px 14px; }
 .mgmt-card__name  { font-weight: 600; font-size: .92rem; }
 .mgmt-card__cat   { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
-.mgmt-card__price { font-family: var(--font-d); font-size: 1.1rem; color: var(--amber); font-weight: 700; margin-top: 4px; }
+.mgmt-card__price { font-family: var(--font); font-size: 1rem; color: var(--amber); font-weight: 700; margin-top: 4px; }
 .mgmt-card__actions { display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); }
 
 /* Category list in modal */
@@ -1072,20 +1072,20 @@
     align-items: center;
     gap: 10px;
     background: var(--green);
-    color: var(--text-invert);
+    color: #fff;
     border: none;
     border-radius: 100px;
     padding: 13px 22px;
-    font-size: .92rem;
+    font-size: .88rem;
     font-weight: 700;
     line-height: 1;
-    box-shadow: var(--glow-green-s), 0 4px 24px rgba(0,0,0,.55);
+    box-shadow: var(--glow-green-s), 0 6px 24px rgba(0,0,0,.60);
     cursor: pointer;
     transition: transform var(--t), box-shadow var(--t);
   }
   .mob-cart-fab:active { transform: scale(.95); }
   .mob-cart-fab__count {
-    background: var(--text-invert);
+    background: #fff;
     color: var(--green);
     border-radius: 100px;
     font-size: .72rem;

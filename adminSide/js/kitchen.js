@@ -23,11 +23,13 @@ const orderMeta  = new Map()  // orderId → { order_type }
 
 // ─── Load active kitchen orders ────────────────────────────────
 async function loadOrders() {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('orders')
-    .select('*, restaurant_tables(number), order_items(*, order_item_modifiers(*))')
+    .select('*, restaurant_tables(number), order_items(*)')
     .in('status', ['in_kitchen', 'ready'])
     .order('created_at')
+
+  if (error) { toast('Error al cargar pedidos: ' + error.message, 'error'); return }
 
   const inKitchen = (data || []).filter(o => o.status === 'in_kitchen')
   const ready     = (data || []).filter(o => o.status === 'ready')

@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 // ─── Replace these values with your Supabase project credentials ───────────
 // Supabase → Project Settings → API
-const SUPABASE_URL  = 'https://hrzlidatjxzgmxvbscgd.supabase.co'
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyemxpZGF0anh6Z214dmJzY2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyODYyMjQsImV4cCI6MjA5Mzg2MjIyNH0.pKOQ8SLZfR0Lc2vTE05sxs2AWOebq7cY6Zc_ZXNHmMc'
+const SUPABASE_URL  = 'https://gnjwwhuuzwcxcuqzevyn.supabase.co'
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imduand3aHV1endjeGN1cXpldnluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MjI1NDksImV4cCI6MjA5ODA5ODU0OX0.UEFxh2pz36s9VsXzZf--DdWaDQTyLGqAfVko87fgH6w'
 // ───────────────────────────────────────────────────────────────────────────
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON)
@@ -66,7 +66,7 @@ export function calcTotals(subtotal) {
 // ─── Format helpers ──────────────────────────────────────────────────────────
 export const fmt = {
   currency: (n) => '$ ' + Math.round(+(n ?? 0)).toLocaleString('es-CO'),
-  date: (d) => new Date(d).toLocaleDateString('es-CO', { year:'numeric', month:'short', day:'numeric' }),
+  date: (d) => { const s = String(d); const dt = s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s); return dt.toLocaleDateString('es-CO', { year:'numeric', month:'short', day:'numeric' }) },
   time: (d) => new Date(d).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' }),
   datetime: (d) => `${fmt.date(d)} ${fmt.time(d)}`
 }
