@@ -61,3 +61,11 @@ export type OrderMenuItem = {
   available: boolean
   categories: { name: string; icon: string | null } | null
 }
+
+export type RestaurantTable = {
+  id: string
+  number: number
+  capacity: number
+  location: string
+  status: 'available' | 'occupied' | 'reserved' | 'maintenance'
+}
