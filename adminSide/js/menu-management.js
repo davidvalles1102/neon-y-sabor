@@ -29,7 +29,7 @@ function buildCatTabs() {
     const btn = document.createElement('button')
     btn.className = `cat-tab ${activeCat === c.id ? 'active' : ''}`
     btn.dataset.cat = c.id
-    btn.textContent = `${c.icon} ${c.name}`
+    btn.textContent = `${c.icon ?? ''} ${c.name}`
     el.appendChild(btn)
   })
   el.querySelectorAll('.cat-tab').forEach(btn => {

@@ -6,6 +6,23 @@ import { modifiersSummary } from '../../shared/modifier-modal.js'
 ;(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) { window.location.href = 'login.html'; return }
+
+  // Suscribir DESPUÉS de confirmar sesión para que el JWT autenticado
+  // esté presente en el WebSocket — sin esto se conecta como anon y RLS
+  // bloquea la entrega de eventos postgres_changes
+  supabase
+    .channel('kitchen-live')
+    .on('postgres_changes', {
+      event:  '*',
+      schema: 'public',
+      table:  'orders'
+    }, (payload) => {
+      console.log('[RT] evento recibido:', payload)
+      loadOrders(); loadHistory()
+    })
+    .subscribe((status, err) => {
+      console.log('[RT] estado:', status, err ?? '')
+    })
 })()
 
 // Live clock
@@ -25,7 +42,7 @@ const orderMeta  = new Map()  // orderId → { order_type }
 async function loadOrders() {
   const { data, error } = await supabase
     .from('orders')
-    .select('*, restaurant_tables(number), order_items(*)')
+    .select('*, restaurant_tables(number), order_items(*, order_item_modifiers(*))')
     .in('status', ['in_kitchen', 'ready'])
     .order('created_at')
 
@@ -212,18 +229,6 @@ document.getElementById('historyToggle').addEventListener('click', () => {
   document.getElementById('historyBody').classList.toggle('collapsed', historyCollapsed)
   document.getElementById('historyToggleBtn').textContent = historyCollapsed ? '▼' : '▲'
 })
-
-// ─── Realtime subscription ─────────────────────────────────────
-// Un solo canal sin filtro de status para capturar todos los cambios
-// (incluyendo cuando una orden pasa a 'delivered' y ya no estaría en el filtro anterior)
-supabase
-  .channel('kitchen-live')
-  .on('postgres_changes', {
-    event:  '*',
-    schema: 'public',
-    table:  'orders'
-  }, () => { loadOrders(); loadHistory() })
-  .subscribe()
 
 // ─── Timer refresh every 30 seconds ────────────────────────────
 setInterval(() => {

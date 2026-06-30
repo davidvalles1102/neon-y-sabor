@@ -16,6 +16,7 @@ const POINT_VALUE        = 0.01   // $ por punto
 const MAX_REDEEM_PERCENT = 0.5    // máximo % del total que se puede pagar con puntos
 let orderType         = 'dine_in'   // 'dine_in' | 'takeout' | 'delivery'
 let lastReceiptData   = null        // snapshot para WhatsApp
+let orderStatusChannel = null       // Realtime subscription para el estado de la orden activa
 
 async function init() {
   const ctx = await initAdminShell(['admin', 'waiter'])
@@ -90,7 +91,7 @@ async function loadMenu() {
     const btn = document.createElement('button')
     btn.className = 'pos-cat'
     btn.dataset.cat = cat.id
-    btn.textContent = `${cat.icon} ${cat.name}`
+    btn.textContent = `${cat.icon ?? ''} ${cat.name}`
     btn.addEventListener('click', () => { activeCat = cat.id; renderMenuGrid(); setActiveTab(btn) })
     tabsEl.appendChild(btn)
   })
@@ -178,6 +179,8 @@ function setupTicket() {
         total:    o.total    ?? 0
       }
       await markTableOccupied(selectedTable.id)
+      updateOrderStatusBanner(o.status)
+      subscribeToOrderStatus(o.id)
       renderTicket()
       toast(`Mesa ${selectedTable.number}: orden activa cargada ✓`, 'success')
     } else {
@@ -228,6 +231,8 @@ async function loadOrCreateOrder(forceNew = false) {
         total:    o.total    ?? 0
       }
       // No marcar ocupada aquí — ya lo está o se marca al crear/enviar
+      updateOrderStatusBanner(o.status)
+      subscribeToOrderStatus(o.id)
       renderTicket()
       toast(`Mesa ${selectedTable.number}: orden activa cargada ✓`, 'success')
       return
@@ -259,6 +264,8 @@ async function loadOrCreateOrder(forceNew = false) {
   if (error) { toast('Error al crear orden', 'error'); return }
   currentOrder = { id: data.id, table_id: selectedTable?.id ?? null, items: [] }
   if (orderType === 'dine_in' && selectedTable) await markTableOccupied(selectedTable.id)
+  updateOrderStatusBanner('open')
+  subscribeToOrderStatus(data.id)
   renderTicket()
   const toastMsg = orderType === 'dine_in' ? `Orden nueva — Mesa ${selectedTable.number}` : orderType === 'takeout' ? 'Orden Para Llevar creada' : 'Orden Domicilio creada'
   toast(toastMsg)
@@ -399,6 +406,10 @@ async function sendToKitchen() {
 async function clearTicket() {
   if (!confirm('¿Limpiar la orden actual?')) return
 
+  orderStatusChannel?.unsubscribe()
+  orderStatusChannel = null
+  updateOrderStatusBanner(null)
+
   // Guardar referencia antes de limpiar
   const tableToCheck = (orderType === 'dine_in' && selectedTable)
     ? { id: selectedTable.id, number: selectedTable.number }
@@ -452,6 +463,36 @@ function updateMobFab() {
   if (!countEl) return
   const n = currentOrder?.items.reduce((s, i) => s + i.qty, 0) ?? 0
   countEl.textContent = n
+}
+
+// ─── Order Status Realtime ───────────────────────────────────────
+function updateOrderStatusBanner(status) {
+  const el = document.getElementById('orderStatusBanner')
+  if (!el) return
+  const cfg = {
+    in_kitchen: { text: '🟡 EN COCINA — preparando...', cls: 'status--kitchen', show: true  },
+    ready:      { text: '✅ LISTA — llevar a la mesa',  cls: 'status--ready',   show: true  },
+    delivered:  { text: '🍽️ ENTREGADA',                cls: 'status--delivered',show: true  },
+  }
+  const c = cfg[status]
+  if (!c) { el.style.display = 'none'; el.className = ''; return }
+  el.textContent = c.text
+  el.className   = c.cls
+  el.style.display = ''
+}
+
+function subscribeToOrderStatus(orderId) {
+  orderStatusChannel?.unsubscribe()
+  orderStatusChannel = supabase
+    .channel(`pos-order-${orderId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}`
+    }, (payload) => {
+      const s = payload.new?.status
+      updateOrderStatusBanner(s)
+      if (s === 'ready') toast('✅ ¡Orden lista! Llevar a la mesa', 'success', 6000)
+    })
+    .subscribe()
 }
 
 // ─── Pay Modal ────────────────────────────────────────────────────
@@ -632,6 +673,9 @@ async function processPayment() {
   renderReceipt(receipt, change, { redeemedPts, redeemedValue, earnedPts })
   toast('Pago procesado ✓', 'success')
 
+  orderStatusChannel?.unsubscribe()
+  orderStatusChannel = null
+  updateOrderStatusBanner(null)
   currentOrder  = null
   selectedTable = null
   linkedCustomer= null

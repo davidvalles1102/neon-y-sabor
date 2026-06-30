@@ -43,7 +43,7 @@ async function loadMenu() {
     const btn = document.createElement('button')
     btn.className = 'cat-tab'
     btn.dataset.cat = cat.id
-    btn.textContent = `${cat.icon} ${cat.name}`
+    btn.textContent = `${cat.icon ?? ''} ${cat.name}`
     btn.addEventListener('click', () => setCategory(cat.id, btn))
     tabsEl.appendChild(btn)
   })

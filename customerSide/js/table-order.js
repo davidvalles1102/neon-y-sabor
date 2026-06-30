@@ -75,7 +75,7 @@ async function loadMenu() {
     const btn = document.createElement('button')
     btn.className = 'pos-cat'
     btn.dataset.cat = cat.id
-    btn.textContent = `${cat.icon} ${cat.name}`
+    btn.textContent = `${cat.icon ?? ''} ${cat.name}`
     btn.addEventListener('click', () => { activeCat = cat.id; renderGrid(); setActiveTab(btn) })
     tabs.appendChild(btn)
   })
