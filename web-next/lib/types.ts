@@ -96,3 +96,18 @@ export type Payment = {
   } | null
   profiles: { full_name: string | null } | null
 }
+
+export type ExpenseCategory = 'insumos' | 'servicios' | 'nomina' | 'renta' | 'mantenimiento' | 'marketing' | 'transporte' | 'otros'
+
+export type Expense = {
+  id: string
+  category: ExpenseCategory
+  description: string
+  amount: number
+  payment_method: 'cash' | 'card' | 'transfer'
+  expense_date: string
+  is_recurring: boolean
+  recurrence: 'daily' | 'weekly' | 'monthly' | null
+  registered_by: string
+  profiles: { full_name: string | null } | null
+}
