@@ -14,6 +14,7 @@ export type TicketItem = {
 export type CurrentOrder = {
   id: string
   table_id: string | null
+  status: string
   items: TicketItem[]
   subtotal: number
   tax: number

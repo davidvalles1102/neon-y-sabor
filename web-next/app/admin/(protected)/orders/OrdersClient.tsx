@@ -134,7 +134,7 @@ export default function OrdersClient() {
 
     if (data?.length) {
       const o = data[0]
-      setCurrentOrder({ id: o.id, table_id: id, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
+      setCurrentOrder({ id: o.id, table_id: id, status: o.status, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
       await markTableOccupied(id)
       toast(`Mesa ${table?.number}: orden activa cargada ✓`, 'success')
     } else {
@@ -159,7 +159,7 @@ export default function OrdersClient() {
     }).select().single()
 
     if (error) { toast('Error al crear orden', 'error'); return }
-    setCurrentOrder({ id: data.id, table_id: orderType === 'dine_in' ? selectedTableId || null : null, items: [], subtotal: 0, tax: 0, total: 0 })
+    setCurrentOrder({ id: data.id, table_id: orderType === 'dine_in' ? selectedTableId || null : null, status: 'open', items: [], subtotal: 0, tax: 0, total: 0 })
     if (orderType === 'dine_in' && selectedTableId) await markTableOccupied(selectedTableId)
     const toastMsg = orderType === 'dine_in' ? `Orden nueva — Mesa ${selectedTable?.number}` : orderType === 'takeout' ? 'Orden Para Llevar creada' : 'Orden Domicilio creada'
     toast(toastMsg)
@@ -196,8 +196,12 @@ export default function OrdersClient() {
 
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
     const { tax, total } = calcTotals(subtotal)
-    await supabase.from('orders').update({ subtotal, tax, total }).eq('id', currentOrder.id)
-    setCurrentOrder({ ...currentOrder, items: newItems, subtotal, tax, total })
+    const reopenKitchen = currentOrder.status === 'ready' || currentOrder.status === 'delivered'
+    const update: Record<string, unknown> = { subtotal, tax, total }
+    if (reopenKitchen) update.status = 'in_kitchen'
+    await supabase.from('orders').update(update).eq('id', currentOrder.id)
+    setCurrentOrder({ ...currentOrder, status: reopenKitchen ? 'in_kitchen' : currentOrder.status, items: newItems, subtotal, tax, total })
+    if (reopenKitchen) toast('Platillo agregado — orden reenviada a cocina 👨‍🍳', 'success')
   }
 
   const changeQty = async (dbId: string, delta: number) => {
@@ -217,8 +221,12 @@ export default function OrdersClient() {
 
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
     const { tax, total } = calcTotals(subtotal)
-    await supabase.from('orders').update({ subtotal, tax, total }).eq('id', currentOrder.id)
-    setCurrentOrder({ ...currentOrder, items: newItems, subtotal, tax, total })
+    const reopenKitchen = delta > 0 && (currentOrder.status === 'ready' || currentOrder.status === 'delivered')
+    const update: Record<string, unknown> = { subtotal, tax, total }
+    if (reopenKitchen) update.status = 'in_kitchen'
+    await supabase.from('orders').update(update).eq('id', currentOrder.id)
+    setCurrentOrder({ ...currentOrder, status: reopenKitchen ? 'in_kitchen' : currentOrder.status, items: newItems, subtotal, tax, total })
+    if (reopenKitchen) toast('Cantidad aumentada — orden reenviada a cocina 👨‍🍳', 'success')
   }
 
   const handleItemClick = async (item: OrderMenuItem) => {
@@ -238,6 +246,7 @@ export default function OrdersClient() {
     if (orderType !== 'dine_in') update.delivery_status = 'pending'
     const { error } = await supabase.from('orders').update(update).eq('id', currentOrder.id)
     if (error) { toast('Error al enviar a cocina', 'error'); return }
+    setCurrentOrder({ ...currentOrder, status: 'in_kitchen' })
     toast('Orden enviada a cocina 👨‍🍳', 'success')
   }
 
