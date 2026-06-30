@@ -69,3 +69,30 @@ export type RestaurantTable = {
   location: string
   status: 'available' | 'occupied' | 'reserved' | 'maintenance'
 }
+
+export type OrderItemModifier = {
+  option_name: string
+  price_delta: number
+}
+
+export type PaymentOrderItem = {
+  id: string
+  item_name: string
+  item_price: number
+  quantity: number
+  order_item_modifiers: OrderItemModifier[]
+}
+
+export type Payment = {
+  id: string
+  receipt_number: string
+  method: 'cash' | 'card' | 'transfer' | 'points'
+  amount: number
+  change_amount: number
+  created_at: string
+  orders: {
+    restaurant_tables: { number: number } | null
+    order_items: PaymentOrderItem[]
+  } | null
+  profiles: { full_name: string | null } | null
+}
