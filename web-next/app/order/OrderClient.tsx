@@ -328,7 +328,7 @@ export default function OrderClient({
         </div>
 
         <div className="cart-payment-selector">
-          <div className="payment-type-tabs">
+          <div className="payment-type-tabs" style={{ display: 'none' }}>
             <button className={`payment-btn${paymentMethod === 'cash' ? ' active' : ''}`} onClick={() => setPaymentMethod('cash')}>💵 Efectivo</button>
             <button className={`payment-btn${paymentMethod === 'nequi' ? ' active' : ''}`} onClick={() => setPaymentMethod('nequi')}>📱 Nequi</button>
           </div>

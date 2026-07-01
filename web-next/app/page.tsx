@@ -23,7 +23,7 @@ export default async function HomePage() {
       <header className="hero">
         <div className="hero__bg-grid"></div>
         <div className="hero__content">
-          <p className="hero__eyebrow neon-amber">San Salvador, El Salvador · Lun–Vie: 11AM–2:30PM &amp; 6–10:30PM · Sáb–Dom: 11AM–10:30PM</p>
+          <p className="hero__eyebrow neon-amber">Ave La Reyna, Entre PJE 7 Y 1de Mayo, San Salvador · Lun–Vie: 11AM–2:30PM &amp; 6–10:30PM · Sáb–Dom: 11AM–10:30PM</p>
           <h1 className="hero__title">
             <span className="neon-green">CRUNCHIES</span>
           </h1>

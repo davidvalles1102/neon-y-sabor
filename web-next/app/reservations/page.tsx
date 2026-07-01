@@ -27,7 +27,7 @@ export default function ReservationsPage() {
           <div className="info-card">
             <div className="info-icon">📞</div>
             <h4>¿Necesitas ayuda?</h4>
-            <p>Llámanos o escríbenos<br /><span className="neon-amber" style={{ fontWeight: 700 }}>+57 000 000 0000</span></p>
+            <p>Llámanos o escríbenos<br /><span className="neon-amber" style={{ fontWeight: 700 }}>+503 7311 8276</span></p>
           </div>
           <div className="info-card">
             <div className="info-icon">📋</div>
