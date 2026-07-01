@@ -52,13 +52,29 @@ export default function PaymentsClient() {
     doc.save(`recibo-${p.receipt_number}.pdf`)
   }
 
-  const confirmWhatsApp = () => {
+  const confirmWhatsApp = async () => {
     const raw = waPhone.trim().replace(/[\s\-()+]/g, '')
     if (!raw) { toast('Ingresa un número de WhatsApp', 'warning'); return }
-    if (receiptPayment) {
-      downloadPDF(receiptPayment)
-      toast('PDF descargado — adjúntalo en WhatsApp 📎', 'success')
+    if (!receiptPayment) return
+
+    const doc = buildPaymentPDF(receiptPayment)
+    const blob = doc.output('blob')
+    const file = new File([blob], `recibo-${receiptPayment.receipt_number}.pdf`, { type: 'application/pdf' })
+
+    // Mobile: use native share sheet so WhatsApp receives the PDF directly
+    if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+      setWaOpen(false)
+      try {
+        await navigator.share({ files: [file], title: `Recibo ${receiptPayment.receipt_number}` })
+      } catch {
+        // user cancelled share sheet — no-op
+      }
+      return
     }
+
+    // Desktop fallback: download PDF then open WhatsApp
+    doc.save(`recibo-${receiptPayment.receipt_number}.pdf`)
+    toast('PDF descargado — adjúntalo manualmente en WhatsApp 📎', 'info')
     window.open(`https://wa.me/${raw}`, '_blank')
     setWaOpen(false)
   }
@@ -178,7 +194,20 @@ export default function PaymentsClient() {
           )}
           <div className="modal-footer">
             <button className="btn btn-outline" onClick={() => setReceiptPayment(null)}>Cerrar</button>
-            <button className="btn btn-whatsapp" onClick={() => { setWaPhone(''); setWaOpen(true) }}>📱 WhatsApp</button>
+            <button className="btn btn-whatsapp" onClick={async () => {
+              if (!receiptPayment) return
+              const testFile = new File([new Blob()], 'test.pdf', { type: 'application/pdf' })
+              if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [testFile] })) {
+                // Mobile: share sheet available — share PDF directly without phone dialog
+                const doc = buildPaymentPDF(receiptPayment)
+                const blob = doc.output('blob')
+                const file = new File([blob], `recibo-${receiptPayment.receipt_number}.pdf`, { type: 'application/pdf' })
+                try { await navigator.share({ files: [file], title: `Recibo ${receiptPayment.receipt_number}` }) } catch { /* cancelled */ }
+              } else {
+                // Desktop: ask for phone number
+                setWaPhone(''); setWaOpen(true)
+              }
+            }}>📱 WhatsApp</button>
             <button className="btn btn-primary" onClick={() => receiptPayment && downloadPDF(receiptPayment)}>🖨️ Reimprimir</button>
           </div>
         </div>
