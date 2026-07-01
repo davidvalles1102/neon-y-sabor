@@ -564,8 +564,6 @@ export default function OrdersClient() {
           </div>
 
           <div className="ticket-totals">
-            <div className="total-row"><span>Subtotal</span><span>{fmt.currency(currentOrder?.subtotal ?? 0)}</span></div>
-            <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(currentOrder?.tax ?? 0)}</span></div>
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(currentOrder?.total ?? 0)}</span></div>
           </div>
 
@@ -674,8 +672,6 @@ export default function OrdersClient() {
                   </div>
                 ))}
                 <hr className="receipt__divider" />
-                <div className="receipt__item"><span>Subtotal</span><span>{fmt.currency(lastReceiptData.subtotal)}</span></div>
-                <div className="receipt__item"><span>IVA 8%</span><span>{fmt.currency(lastReceiptData.tax)}</span></div>
                 {lastReceiptData.redeemedPts > 0 && (
                   <div className="receipt__item"><span>Puntos canjeados (-{lastReceiptData.redeemedPts} pts)</span><span>-{fmt.currency(lastReceiptData.redeemedValue)}</span></div>
                 )}

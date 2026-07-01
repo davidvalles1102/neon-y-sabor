@@ -12,6 +12,8 @@ import ModifierModal from './ModifierModal'
 import SuccessModal from './SuccessModal'
 import './order.css'
 
+const ORDERING_ENABLED = false
+
 type CartLine = {
   id: string
   name: string
@@ -175,14 +177,16 @@ export default function OrderClient({
   }
 
   return (
-    <div className="order-layout">
-      <div className="order-menu-panel">
+    <div className="order-layout" style={!ORDERING_ENABLED ? { paddingTop: 0 } : undefined}>
+      <div className="order-menu-panel" style={!ORDERING_ENABLED ? { maxWidth: '100%', flex: '1 1 100%' } : undefined}>
         <div className="order-panel-header">
-          <h2>¿Qué vas a pedir?</h2>
-          <div className="order-type-tabs">
-            <button className={`order-type-btn${orderType === 'takeout' ? ' active' : ''}`} onClick={() => setOrderType('takeout')}>🥡 Para Llevar</button>
-            <button className={`order-type-btn${orderType === 'delivery' ? ' active' : ''}`} onClick={() => setOrderType('delivery')}>🛵 Domicilio</button>
-          </div>
+          <h2>{ORDERING_ENABLED ? '¿Qué vas a pedir?' : 'Nuestro Menú'}</h2>
+          {ORDERING_ENABLED && (
+            <div className="order-type-tabs">
+              <button className={`order-type-btn${orderType === 'takeout' ? ' active' : ''}`} onClick={() => setOrderType('takeout')}>🥡 Para Llevar</button>
+              <button className={`order-type-btn${orderType === 'delivery' ? ' active' : ''}`} onClick={() => setOrderType('delivery')}>🛵 Domicilio</button>
+            </div>
+          )}
         </div>
 
         <div className="order-cat-tabs">
@@ -208,7 +212,8 @@ export default function OrderClient({
                 <div
                   key={item.id}
                   className={`order-item-card${!item.available ? ' order-item-card--unavail' : ''}`}
-                  onClick={() => handleItemClick(item)}
+                  onClick={ORDERING_ENABLED ? () => handleItemClick(item) : undefined}
+                  style={!ORDERING_ENABLED ? { cursor: 'default' } : undefined}
                 >
                   {item.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -228,7 +233,7 @@ export default function OrderClient({
                     {item.description && <div className="order-item-desc">{item.description}</div>}
                     <div className="order-item-footer">
                       <span className="order-item-price">{fmt.currency(item.price)}</span>
-                      <div className="order-item-add">+</div>
+                      {ORDERING_ENABLED && <div className="order-item-add">+</div>}
                     </div>
                   </div>
                 </div>
@@ -238,7 +243,7 @@ export default function OrderClient({
         </div>
       </div>
 
-      <div className="order-cart-panel">
+      {ORDERING_ENABLED && <div className="order-cart-panel">
         <div className="cart-header">
           <h3>Tu Orden</h3>
           <span className="badge badge-green">{cart.reduce((s, i) => s + i.qty, 0)} items</span>
@@ -270,8 +275,6 @@ export default function OrderClient({
         </div>
 
         <div className="cart-totals">
-          <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-          <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
           {orderType === 'delivery' && (
             <div className="total-row"><span>Costo de envío</span><span className="neon-amber">{fmt.currency(deliveryFee)}</span></div>
           )}
@@ -328,7 +331,7 @@ export default function OrderClient({
         </div>
 
         <div className="cart-payment-selector">
-          <div className="payment-type-tabs">
+          <div className="payment-type-tabs" style={{ display: 'none' }}>
             <button className={`payment-btn${paymentMethod === 'cash' ? ' active' : ''}`} onClick={() => setPaymentMethod('cash')}>💵 Efectivo</button>
             <button className={`payment-btn${paymentMethod === 'nequi' ? ' active' : ''}`} onClick={() => setPaymentMethod('nequi')}>📱 Nequi</button>
           </div>
@@ -343,7 +346,7 @@ export default function OrderClient({
                 <span style={{ fontSize: '1.3rem' }}>📱</span>
                 <strong className="neon-green">Transferir por Nequi</strong>
               </div>
-              <div className="nequi-number">312 828 2045</div>
+              <div className="nequi-number">+503 7311 8276</div>
               <p className="text-xs text-muted mt-6">
                 Transfiere el total al número de arriba antes de enviar tu pedido.
                 El restaurante verificará el pago.
@@ -358,7 +361,7 @@ export default function OrderClient({
             {placing ? 'Enviando pedido...' : 'Hacer Pedido'}
           </button>
         </div>
-      </div>
+      </div>}
 
       {modalState && (
         <ModifierModal

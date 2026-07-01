@@ -209,18 +209,26 @@ export default function TableOrderClient() {
       .single()
 
     if (orderErr || !order) {
+      console.error('[TableOrder] submitOrder failed:', orderErr)
       setOrderMsg('Error al enviar el pedido. Intenta de nuevo.')
       setSubmitting(false)
       return
     }
 
-    const { data: insertedItems } = await supabase.from('order_items').insert(
-      cart.map((c) => ({ order_id: order.id, menu_item_id: c.id, item_name: c.name, item_price: c.price, quantity: c.qty }))
-    ).select()
+    const orderItemsPayload = cart.map((c) => ({
+      id: crypto.randomUUID(),
+      order_id: order.id,
+      menu_item_id: c.id,
+      item_name: c.name,
+      item_price: c.price,
+      quantity: c.qty,
+    }))
+
+    await supabase.from('order_items').insert(orderItemsPayload)
 
     const modifierRows: { order_item_id: string; option_name: string; price_delta: number }[] = []
-    ;(insertedItems || []).forEach((row, idx) => {
-      (cart[idx].modifiers || []).forEach((m) => {
+    orderItemsPayload.forEach((row, idx) => {
+      ;(cart[idx].modifiers || []).forEach((m) => {
         modifierRows.push({ order_item_id: row.id, option_name: m.option_name, price_delta: m.price_delta })
       })
     })
@@ -357,8 +365,6 @@ export default function TableOrderClient() {
           </div>
 
           <div className="cart-totals">
-            <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-            <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(total)}</span></div>
           </div>
 
@@ -396,8 +402,6 @@ export default function TableOrderClient() {
           </div>
 
           <div className="cart-totals" style={{ borderTop: 'none', padding: 0 }}>
-            <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-            <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(total)}</span></div>
           </div>
 

@@ -22,12 +22,12 @@ export default function ReservationsPage() {
           <div className="info-card">
             <div className="info-icon">🕐</div>
             <h4>Horarios</h4>
-            <p>Lun – Jue: 12 pm – 10 pm<br />Vie – Dom: 12 pm – 12 am</p>
+            <p>Lun–Vie: 11:00 AM – 2:30 PM · 6:00 PM – 10:30 PM<br />Sáb–Dom: 11:00 AM – 10:30 PM</p>
           </div>
           <div className="info-card">
             <div className="info-icon">📞</div>
             <h4>¿Necesitas ayuda?</h4>
-            <p>Llámanos o escríbenos<br /><span className="neon-amber" style={{ fontWeight: 700 }}>+57 000 000 0000</span></p>
+            <p>Llámanos o escríbenos<br /><span className="neon-amber" style={{ fontWeight: 700 }}>+503 7311 8276</span></p>
           </div>
           <div className="info-card">
             <div className="info-icon">📋</div>
@@ -40,9 +40,9 @@ export default function ReservationsPage() {
       <footer className="cust-footer">
         <div className="footer-brand">CRUNCHIES</div>
         <div className="footer-details">
-          <span>📍 Piamonte, Cauca, Colombia</span>
-          <span>📞 312 828 2045</span>
-          <span>🕐 Lun–Dom: 6:30 am – 3:30 pm · 4:00 pm – 11:00 pm</span>
+          <span>📍 Ave La Reyna, Entre PJE 7 Y 1de Mayo, San Salvador, El Salvador</span>
+          <span>📞 +503 7311 8276</span>
+          <span>🕐 Lun–Vie: 11:00 AM – 2:30 PM · 6:00 PM – 10:30 PM | Sáb–Dom: 11:00 AM – 10:30 PM</span>
         </div>
         <div className="footer-divider"></div>
         <p className="footer-copy">© 2026 Crunchies — Todos los derechos reservados</p>

@@ -1,4 +1,4 @@
-export const TAX_RATE = 0.08 // 8% IVA
+export const TAX_RATE = 0 // IVA deshabilitado
 
 function round2(n: number) {
   return Math.round(n * 100) / 100

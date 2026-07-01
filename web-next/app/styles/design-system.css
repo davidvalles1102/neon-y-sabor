@@ -69,7 +69,7 @@
   --z-sticky:         200;
   --z-modal-backdrop: 600;
   --z-modal:          700;
-  --z-toast:          800;
+  --z-toast:         1100;
   --z-tooltip:        900;
 }
 
@@ -291,12 +291,17 @@ select.form-control { appearance: none; cursor: pointer; }
 /* Toast container */
 #toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
 }
 .toast {
   min-width: 280px;
@@ -315,8 +320,8 @@ select.form-control { appearance: none; cursor: pointer; }
 .toast.info    { background: rgba(8, 18, 28, 0.95); color: var(--info);   border: 1px solid rgba(74,158,224,.40); }
 .toast.warning { background: rgba(28, 18, 5, 0.95); color: var(--amber);  border: 1px solid var(--amber-dim); }
 
-@keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateX(30px); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateY(12px); } }
 
 /* ─── Loading Spinner ────────────────────────────────────────── */
 .spinner {
@@ -446,6 +451,13 @@ select.form-control { appearance: none; cursor: pointer; }
 ::-webkit-scrollbar-track { background: var(--bg-2); }
 ::-webkit-scrollbar-thumb { background: var(--bg-5); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+/* ─── Touch tap targets (≥44px) ─────────────────────────────── */
+@media (max-width: 768px) {
+  .btn        { min-height: 44px; }
+  .btn-sm     { min-height: 44px; }
+  .modal-close { padding: 10px; }
+}
 
 /* ─── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
