@@ -67,8 +67,6 @@ export function buildReceiptPDF(data: ReceiptData): jsPDF {
   })
   y += 1; hr()
 
-  row2('Subtotal', fmt.currency(data.subtotal), 8.5)
-  row2('IVA (8%)', fmt.currency(data.tax), 8.5)
   if (data.redeemedPts > 0) row2(`Puntos canjeados (-${data.redeemedPts} pts)`, `-${fmt.currency(data.redeemedValue)}`, 8.5)
   y += 1
   doc.setFillColor(245, 245, 245); doc.rect(3, y - 3.5, W - 6, 9.5, 'F')

@@ -275,8 +275,6 @@ export default function OrderClient({
         </div>
 
         <div className="cart-totals">
-          <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-          <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
           {orderType === 'delivery' && (
             <div className="total-row"><span>Costo de envío</span><span className="neon-amber">{fmt.currency(deliveryFee)}</span></div>
           )}

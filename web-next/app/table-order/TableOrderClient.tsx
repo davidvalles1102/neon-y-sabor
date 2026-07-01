@@ -365,8 +365,6 @@ export default function TableOrderClient() {
           </div>
 
           <div className="cart-totals">
-            <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-            <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(total)}</span></div>
           </div>
 
@@ -404,8 +402,6 @@ export default function TableOrderClient() {
           </div>
 
           <div className="cart-totals" style={{ borderTop: 'none', padding: 0 }}>
-            <div className="total-row"><span>Subtotal</span><span>{fmt.currency(subtotal)}</span></div>
-            <div className="total-row"><span>IVA (8%)</span><span>{fmt.currency(tax)}</span></div>
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(total)}</span></div>
           </div>
 
