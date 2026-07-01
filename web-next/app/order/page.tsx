@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
-import NavBar from '../components/NavBar'
+// import NavBar from '../components/NavBar'  // oculto en modo vitrina — restaurar cuando ORDERING_ENABLED = true
 import OrderClient from './OrderClient'
 import type { Category, OrderMenuItem, DeliveryZone } from '@/lib/types'
 
-export const metadata: Metadata = { title: 'Ordenar' }
+export const metadata: Metadata = { title: 'Menú — Crunchies' }
 export const revalidate = 0
 
 export default async function OrderPage() {
@@ -18,7 +18,10 @@ export default async function OrderPage() {
 
   return (
     <>
-      <NavBar />
+      {/* <NavBar /> */}
+      <header style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'var(--clr-bg, #0a0a0a)' }}>
+        <span style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '0.04em', color: 'var(--clr-amber, #f59e0b)', fontFamily: 'inherit' }}>CRUNCHIES</span>
+      </header>
 
       <OrderClient
         categories={(categories ?? []) as Category[]}

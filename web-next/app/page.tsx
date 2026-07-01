@@ -33,7 +33,7 @@ export default async function HomePage() {
           </p>
           <div className="hero__actions">
             <a href="#menu" className="btn btn-primary btn-lg">Ver Menú</a>
-            <Link href="/reservations" className="btn btn-outline btn-lg">Reservar Mesa</Link>
+            {/* <Link href="/reservations" className="btn btn-outline btn-lg">Reservar Mesa</Link> */}
           </div>
         </div>
         <div className="hero__neon-lines" aria-hidden="true">
