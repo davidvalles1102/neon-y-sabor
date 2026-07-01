@@ -328,7 +328,6 @@ export default function WaiterPortalClient() {
   const itemCount = currentOrder?.items.reduce((s, i) => s + i.qty, 0) ?? 0
   const grandTotal = tableOrders.reduce((s, o) => s + o.total, 0)
   const grandSubtotal = tableOrders.reduce((s, o) => s + o.subtotal, 0)
-  const grandTax = tableOrders.reduce((s, o) => s + o.tax, 0)
   const change = Math.max(0, (parseFloat(cashIn) || 0) - grandTotal)
   const hasPayableItems = tableOrders.some((o) => o.items.length > 0)
 
@@ -368,7 +367,6 @@ export default function WaiterPortalClient() {
               </div>
             ))}
             <div className="portal-receipt-item mt-8"><span>Subtotal</span><span>{fmt.currency(grandSubtotal)}</span></div>
-            <div className="portal-receipt-item"><span>IVA 8%</span><span>{fmt.currency(grandTax)}</span></div>
             <div className="portal-receipt-item portal-receipt-total">
               <span>TOTAL</span>
               <span className="neon-green">{fmt.currency(grandTotal)}</span>
