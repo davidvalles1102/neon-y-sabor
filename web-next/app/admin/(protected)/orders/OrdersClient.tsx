@@ -148,6 +148,12 @@ export default function OrdersClient() {
     if (!id) return
     const table = tables.find((t) => t.id === id)
 
+    // Mesa disponible → no buscar órdenes viejas, ir directo a crear
+    if (table?.status !== 'occupied') {
+      toast(`Mesa ${table?.number}: disponible. Presiona "+ Nueva Orden" para comenzar.`, 'warning')
+      return
+    }
+
     const { data } = await supabase
       .from('orders')
       .select('*, order_items(*, order_item_modifiers(*))')
@@ -159,10 +165,9 @@ export default function OrdersClient() {
     if (data?.length) {
       const o = data[0]
       setCurrentOrder({ id: o.id, table_id: id, status: o.status, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
-      await markTableOccupied(id)
       toast(`Mesa ${table?.number}: orden activa cargada ✓`, 'success')
     } else {
-      toast(`Mesa ${table?.number}: sin orden activa. Presiona "+ Nueva Orden" para comenzar.`, 'warning')
+      toast(`Mesa ${table?.number}: ocupada sin orden activa. Presiona "+ Nueva Orden" para comenzar.`, 'warning')
     }
   }
 

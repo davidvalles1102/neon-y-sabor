@@ -8,6 +8,7 @@ import type { Selection } from '@/lib/modifiers'
 import { getPinSession, logoutPin, logEvent, type PinSession } from '@/lib/pin-auth'
 import PinPad from '../PinPad'
 import ModifierModal from '../../order/ModifierModal'
+import { useToast } from '../../components/ToastProvider'
 import type { Category, OrderMenuItem, ModifierGroup, RestaurantTable } from '@/lib/types'
 
 type WaiterView = 'tables' | 'order' | 'pay'
@@ -17,28 +18,41 @@ type TicketItem = {
   dbId: string; id: string; name: string; price: number; qty: number
   modifiers: Selection[]; lineKey: string
 }
-type ActiveOrder = { id: string; table_id: string; status: string; items: TicketItem[]; subtotal: number; tax: number; total: number }
+type ActiveOrder = {
+  id: string; table_id: string; status: string
+  items: TicketItem[]; subtotal: number; tax: number; total: number
+}
 
-const ROLE_BADGE: Record<string, string> = {
-  available: 'waiter-table-card--available',
-  occupied: 'waiter-table-card--occupied',
-  reserved: 'waiter-table-card--reserved',
+const TABLE_CARD_CLS: Record<string, string> = {
+  available:   'waiter-table-card--available',
+  occupied:    'waiter-table-card--occupied',
+  reserved:    'waiter-table-card--reserved',
   maintenance: 'waiter-table-card--maintenance',
 }
 
-function mapItems(raw: { id: string; menu_item_id: string; item_name: string; item_price: number; quantity: number; order_item_modifiers: { option_name: string; price_delta: number }[] }[]): TicketItem[] {
+function mapItems(raw: {
+  id: string; menu_item_id: string; item_name: string; item_price: number
+  quantity: number; order_item_modifiers: { option_name: string; price_delta: number }[]
+}[]): TicketItem[] {
   return (raw || []).map((i) => {
-    const modifiers: Selection[] = (i.order_item_modifiers || []).map((m) => ({ option_name: m.option_name, price_delta: Number(m.price_delta) }))
-    return { dbId: i.id, id: i.menu_item_id, name: i.item_name, price: Number(i.item_price), qty: i.quantity, modifiers, lineKey: buildLineKey(i.menu_item_id, modifiers) }
+    const modifiers: Selection[] = (i.order_item_modifiers || []).map((m) => ({
+      option_name: m.option_name, price_delta: Number(m.price_delta),
+    }))
+    return {
+      dbId: i.id, id: i.menu_item_id, name: i.item_name,
+      price: Number(i.item_price), qty: i.quantity, modifiers,
+      lineKey: buildLineKey(i.menu_item_id, modifiers),
+    }
   })
 }
 
 export default function WaiterPortalClient() {
   const supabase = createClient()
+  const toast = useToast()
   const [session, setSession] = useState<PinSession | null>(null)
   const [view, setView] = useState<WaiterView>('tables')
+  const [mobileTab, setMobileTab] = useState<'menu' | 'ticket'>('menu')
 
-  // Data
   const [tables, setTables] = useState<RestaurantTable[]>([])
   const [tableStatus, setTableStatus] = useState<TableStatus>({})
   const [categories, setCategories] = useState<Category[]>([])
@@ -46,19 +60,20 @@ export default function WaiterPortalClient() {
   const [activeCat, setActiveCat] = useState('all')
   const [search, setSearch] = useState('')
 
-  // Order
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null)
+  // currentOrder = la comanda ABIERTA (editable). null si no hay comanda abierta.
   const [currentOrder, setCurrentOrder] = useState<ActiveOrder | null>(null)
+  // tableOrders = TODAS las comandas activas de la mesa (open + in_kitchen + ready + delivered)
+  const [tableOrders, setTableOrders] = useState<ActiveOrder[]>([])
   const [orderNotes, setOrderNotes] = useState('')
-  const [modModal, setModModal] = useState<{ item: { id: string; name: string; price: number }; groups: ModifierGroup[] } | null>(null)
+  const [modModal, setModModal] = useState<{
+    item: { id: string; name: string; price: number }; groups: ModifierGroup[]
+  } | null>(null)
 
-  // Pay
   const [payMethod, setPayMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [cashIn, setCashIn] = useState('')
   const [paying, setPaying] = useState(false)
-
-  // Realtime alert for ready orders
-  const [readyAlert, setReadyAlert] = useState<Set<string>>(new Set()) // table_ids with ready orders
+  const [readyAlert, setReadyAlert] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const s = getPinSession()
@@ -67,40 +82,38 @@ export default function WaiterPortalClient() {
 
   useEffect(() => {
     if (!session) return undefined
-
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) supabase.from('profiles').upsert({ id: user.id, role: 'waiter' }, { onConflict: 'id' })
+    })
     loadAll()
-
     const channel = supabase
       .channel('waiter-portal')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        loadTableStatus()
-        // Update active order status if viewing order view
-        if (currentOrder) loadActiveOrder(currentOrder.table_id)
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, loadTableStatus)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, loadTables)
       .subscribe()
-
     return () => { channel.unsubscribe() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  // Re-subscribe when currentOrder changes (for status banner)
+  // Realtime por mesa: detecta cuando cocina marca una comanda como ready
   useEffect(() => {
-    if (!currentOrder) return undefined
+    if (!selectedTable) return undefined
     const channel = supabase
-      .channel(`waiter-order-${currentOrder.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${currentOrder.id}` }, (payload) => {
-        const newStatus = (payload.new as { status?: string })?.status
-        if (!newStatus) return
-        setCurrentOrder((prev) => prev ? { ...prev, status: newStatus } : prev)
-        if (newStatus === 'ready' && currentOrder.table_id) {
-          setReadyAlert((prev) => new Set([...prev, currentOrder.table_id]))
+      .channel(`waiter-table-${selectedTable.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'orders',
+        filter: `table_id=eq.${selectedTable.id}`,
+      }, (payload) => {
+        const { id, status } = payload.new as { id: string; status: string }
+        setTableOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o))
+        if (status === 'ready') {
+          setReadyAlert((prev) => new Set([...prev, selectedTable.id]))
         }
       })
       .subscribe()
     return () => { channel.unsubscribe() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentOrder?.id])
+  }, [selectedTable?.id])
 
   async function loadAll() {
     const [{ data: tablesData }, { data: cats }, { data: items }] = await Promise.all([
@@ -121,16 +134,13 @@ export default function WaiterPortalClient() {
 
   async function loadTableStatus() {
     const { data } = await supabase
-      .from('orders')
-      .select('table_id, status')
-      .in('status', ['in_kitchen', 'ready', 'open'])
+      .from('orders').select('table_id, status')
+      .in('status', ['open', 'in_kitchen', 'ready'])
       .not('table_id', 'is', null)
-
     const map: TableStatus = {}
     const alerts = new Set<string>()
     ;(data || []).forEach((o: { table_id: string | null; status: string }) => {
       if (!o.table_id) return
-      // ready trumps in_kitchen
       if (!map[o.table_id] || o.status === 'ready') map[o.table_id] = o.status as 'in_kitchen' | 'ready'
       if (o.status === 'ready') alerts.add(o.table_id)
     })
@@ -138,31 +148,32 @@ export default function WaiterPortalClient() {
     setReadyAlert(alerts)
   }
 
-  async function loadActiveOrder(tableId: string) {
+  // Carga TODAS las comandas activas de la mesa en orden cronológico
+  async function loadActiveOrders(tableId: string) {
     const { data } = await supabase
       .from('orders')
       .select('*, order_items(*, order_item_modifiers(*))')
       .eq('table_id', tableId)
       .in('status', ['open', 'in_kitchen', 'ready', 'delivered'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    if (data?.length) {
-      const o = data[0]
-      setCurrentOrder({ id: o.id, table_id: tableId, status: o.status, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
-    } else {
-      setCurrentOrder(null)
-    }
+      .order('created_at', { ascending: true })
+    const orders: ActiveOrder[] = (data || []).map((o) => ({
+      id: o.id, table_id: tableId, status: o.status,
+      items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0,
+    }))
+    setTableOrders(orders)
+    setCurrentOrder(orders.find((o) => o.status === 'open') ?? null)
   }
 
   async function selectTable(table: RestaurantTable) {
     setSelectedTable(table)
     setCurrentOrder(null)
+    setTableOrders([])
     setOrderNotes('')
     setCashIn('')
-    await loadActiveOrder(table.id)
-    // Mark table occupied if available
-    if (table.status === 'available') {
+    setMobileTab('menu')
+    if (table.status === 'occupied') {
+      await loadActiveOrders(table.id)
+    } else if (table.status === 'available') {
       await supabase.from('restaurant_tables').update({ status: 'occupied' }).eq('id', table.id)
       setTables((prev) => prev.map((t) => t.id === table.id ? { ...t, status: 'occupied' } : t))
     }
@@ -174,8 +185,9 @@ export default function WaiterPortalClient() {
     const lineKey = buildLineKey(item.id, modifiers)
     const unitPrice = item.price + modifiersExtraPrice(modifiers)
 
+    // Siempre opera sobre la comanda ABIERTA. Si no hay, crea una nueva.
+    // NUNCA reabre una comanda in_kitchen/ready — esa ya la maneja cocina.
     let order = currentOrder
-    // Auto-create order on first item
     if (!order) {
       const { data, error } = await supabase.from('orders').insert({
         table_id: selectedTable.id,
@@ -183,9 +195,11 @@ export default function WaiterPortalClient() {
         order_type: 'dine_in',
         status: 'open',
       }).select().single()
-      if (error || !data) return
+      if (error || !data) { toast(error?.message ?? 'Error al crear la orden', 'error'); return }
       order = { id: data.id, table_id: selectedTable.id, status: 'open', items: [], subtotal: 0, tax: 0, total: 0 }
-      await supabase.from('restaurant_tables').update({ status: 'occupied' }).eq('id', selectedTable.id)
+      if (tableOrders.length === 0) {
+        await supabase.from('restaurant_tables').update({ status: 'occupied' }).eq('id', selectedTable.id)
+      }
     }
 
     const existing = order.items.find((i) => i.lineKey === lineKey)
@@ -196,14 +210,11 @@ export default function WaiterPortalClient() {
       await supabase.from('order_items').update({ quantity: newQty }).eq('id', existing.dbId)
       newItems = order.items.map((i) => i.lineKey === lineKey ? { ...i, qty: newQty } : i)
     } else {
-      const { data } = await supabase.from('order_items').insert({
-        order_id: order.id,
-        menu_item_id: item.id,
-        item_name: item.name,
-        item_price: unitPrice,
-        quantity: 1,
+      const { data, error } = await supabase.from('order_items').insert({
+        order_id: order.id, menu_item_id: item.id,
+        item_name: item.name, item_price: unitPrice, quantity: 1,
       }).select().single()
-      if (!data) return
+      if (error || !data) { toast(error?.message ?? 'Error al agregar el ítem', 'error'); return }
       if (modifiers.length) {
         await supabase.from('order_item_modifiers').insert(
           modifiers.map((m) => ({ order_item_id: data.id, option_name: m.option_name, price_delta: m.price_delta }))
@@ -214,11 +225,14 @@ export default function WaiterPortalClient() {
 
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
     const { tax, total } = calcTotals(subtotal)
-    const reopen = order.status === 'ready' || order.status === 'delivered'
-    const update: Record<string, unknown> = { subtotal, tax, total }
-    if (reopen) update.status = 'in_kitchen'
-    await supabase.from('orders').update(update).eq('id', order.id)
-    setCurrentOrder({ ...order, status: reopen ? 'in_kitchen' : order.status, items: newItems, subtotal, tax, total })
+    await supabase.from('orders').update({ subtotal, tax, total }).eq('id', order.id)
+    const updated = { ...order, items: newItems, subtotal, tax, total }
+    setCurrentOrder(updated)
+    setTableOrders((prev) => {
+      const exists = prev.find((o) => o.id === updated.id)
+      return exists ? prev.map((o) => o.id === updated.id ? updated : o) : [...prev, updated]
+    })
+    setMobileTab('ticket')
   }
 
   async function changeQty(dbId: string, delta: number) {
@@ -237,38 +251,60 @@ export default function WaiterPortalClient() {
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
     const { tax, total } = calcTotals(subtotal)
     await supabase.from('orders').update({ subtotal, tax, total }).eq('id', currentOrder.id)
-    setCurrentOrder({ ...currentOrder, items: newItems, subtotal, tax, total })
+    const updated = { ...currentOrder, items: newItems, subtotal, tax, total }
+    setCurrentOrder(updated)
+    setTableOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o))
   }
 
   async function sendToKitchen() {
     if (!currentOrder?.items.length) return
-    await supabase.from('orders').update({ status: 'in_kitchen', notes: orderNotes.trim() || null }).eq('id', currentOrder.id)
-    setCurrentOrder({ ...currentOrder, status: 'in_kitchen' })
+    const { error } = await supabase.from('orders')
+      .update({ status: 'in_kitchen', notes: orderNotes.trim() || null })
+      .eq('id', currentOrder.id)
+    if (error) { toast('Error al enviar a cocina', 'error'); return }
+    setTableOrders((prev) => prev.map((o) => o.id === currentOrder.id ? { ...o, status: 'in_kitchen' } : o))
+    setCurrentOrder(null) // no hay comanda abierta hasta que el mesero agregue más ítems
     logEvent(currentOrder.id, 'sent_to_kitchen', session!.staff_id, { table: selectedTable?.number })
+    toast('✓ Pedido enviado a cocina')
     setOrderNotes('')
   }
 
+  async function confirmDelivery(order: ActiveOrder) {
+    const { error } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', order.id)
+    if (error) { toast('Error al confirmar entrega', 'error'); return }
+    const updated = tableOrders.map((o) => o.id === order.id ? { ...o, status: 'delivered' } : o)
+    setTableOrders(updated)
+    const stillReady = updated.some((o) => o.status === 'ready')
+    if (!stillReady) setReadyAlert((prev) => { const n = new Set(prev); n.delete(order.table_id); return n })
+    logEvent(order.id, 'delivered', session!.staff_id, { table: selectedTable?.number })
+    toast('✓ Entrega confirmada')
+  }
+
   async function processPayment() {
-    if (!currentOrder || !selectedTable) return
+    if (!selectedTable || tableOrders.length === 0) return
     setPaying(true)
-    const received = parseFloat(cashIn) || currentOrder.total
-    const receipt = `REC-${Date.now()}`
+    const grandTotal = tableOrders.reduce((s, o) => s + o.total, 0)
+    const received = parseFloat(cashIn) || grandTotal
 
-    await supabase.from('payments').insert({
-      order_id: currentOrder.id,
-      amount: currentOrder.total,
+    const { error } = await supabase.from('payments').insert({
+      order_id: tableOrders[0].id,
+      amount: grandTotal,
       method: payMethod,
-      receipt_number: receipt,
-      change_amount: Math.max(0, received - currentOrder.total),
+      receipt_number: `REC-${Date.now()}`,
+      change_amount: Math.max(0, received - grandTotal),
     })
-    await supabase.from('orders').update({ status: 'paid' }).eq('id', currentOrder.id)
+    if (error) { toast('Error al procesar el pago', 'error'); setPaying(false); return }
+
+    await Promise.all(tableOrders.map((o) =>
+      supabase.from('orders').update({ status: 'paid' }).eq('id', o.id)
+    ))
     await supabase.from('restaurant_tables').update({ status: 'available' }).eq('id', selectedTable.id)
-
-    logEvent(currentOrder.id, 'paid', session!.staff_id, { table: selectedTable.number, total: currentOrder.total, method: payMethod })
-    logEvent(currentOrder.id, 'table_closed', session!.staff_id, { table: selectedTable.number })
-
+    tableOrders.forEach((o) => logEvent(o.id, 'paid', session!.staff_id, { table: selectedTable.number, method: payMethod }))
+    logEvent(tableOrders[0].id, 'table_closed', session!.staff_id, { table: selectedTable.number })
     setTables((prev) => prev.map((t) => t.id === selectedTable.id ? { ...t, status: 'available' } : t))
     setReadyAlert((prev) => { const n = new Set(prev); n.delete(selectedTable.id); return n })
+    toast(`✓ Mesa ${selectedTable.number} cobrada y cerrada`)
+    setTableOrders([])
     setCurrentOrder(null)
     setSelectedTable(null)
     setPaying(false)
@@ -286,17 +322,20 @@ export default function WaiterPortalClient() {
 
   const filteredItems = menuItems.filter((i) =>
     (activeCat === 'all' || i.category_id === activeCat) &&
-    (i.name.toLowerCase().includes(search.toLowerCase()))
+    i.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const change = Math.max(0, (parseFloat(cashIn) || 0) - (currentOrder?.total ?? 0))
+  const itemCount = currentOrder?.items.reduce((s, i) => s + i.qty, 0) ?? 0
+  const grandTotal = tableOrders.reduce((s, o) => s + o.total, 0)
+  const grandSubtotal = tableOrders.reduce((s, o) => s + o.subtotal, 0)
+  const grandTax = tableOrders.reduce((s, o) => s + o.tax, 0)
+  const change = Math.max(0, (parseFloat(cashIn) || 0) - grandTotal)
+  const hasPayableItems = tableOrders.some((o) => o.items.length > 0)
 
-  if (!session) {
-    return <PinPad portalName="Mesero" icon="🪑" expectedRole="waiter" onSuccess={setSession} />
-  }
+  if (!session) return <PinPad portalName="Mesero" icon="🪑" expectedRole="waiter" onSuccess={setSession} />
 
-  // ─── PAY VIEW ───────────────────────────────────────────────────
-  if (view === 'pay' && currentOrder) {
+  // ─── PAY VIEW ──────────────────────────────────────────────────
+  if (view === 'pay' && hasPayableItems) {
     return (
       <div className="portal-body">
         <header className="portal-header">
@@ -307,30 +346,43 @@ export default function WaiterPortalClient() {
           <span className="portal-header__staff">👤 {session.full_name}</span>
         </header>
 
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Order summary */}
+        <div className="portal-pay-wrap">
           <div className="card">
-            <h4 style={{ marginBottom: 10 }}>🧾 Resumen de la orden</h4>
-            {currentOrder.items.map((i) => (
-              <div key={i.dbId} className="receipt__item text-sm" style={{ padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
-                <span>{i.qty}× {i.name}{i.modifiers?.length ? <><br /><span className="text-xs text-muted">{modifiersSummary(i.modifiers)}</span></> : null}</span>
-                <span>{fmt.currency(i.price * i.qty)}</span>
+            <h4 style={{ marginBottom: 10 }}>🧾 Resumen de la mesa</h4>
+            {tableOrders.map((o, idx) => (
+              <div key={o.id}>
+                {tableOrders.length > 1 && (
+                  <div className="text-xs text-muted" style={{ margin: `${idx > 0 ? 10 : 0}px 0 4px` }}>
+                    Comanda {idx + 1}
+                  </div>
+                )}
+                {o.items.map((i) => (
+                  <div key={i.dbId} className="portal-receipt-item text-sm">
+                    <span>
+                      {i.qty}× {i.name}
+                      {i.modifiers?.length ? <><br /><span className="text-xs text-muted">{modifiersSummary(i.modifiers)}</span></> : null}
+                    </span>
+                    <span>{fmt.currency(i.price * i.qty)}</span>
+                  </div>
+                ))}
               </div>
             ))}
-            <div className="receipt__item" style={{ marginTop: 8 }}><span>Subtotal</span><span>{fmt.currency(currentOrder.subtotal)}</span></div>
-            <div className="receipt__item"><span>IVA 8%</span><span>{fmt.currency(currentOrder.tax)}</span></div>
-            <div className="receipt__item receipt__total" style={{ fontWeight: 700, fontSize: '1.2rem', marginTop: 6 }}>
-              <span>TOTAL</span><span className="neon-green">{fmt.currency(currentOrder.total)}</span>
+            <div className="portal-receipt-item mt-8"><span>Subtotal</span><span>{fmt.currency(grandSubtotal)}</span></div>
+            <div className="portal-receipt-item"><span>IVA 8%</span><span>{fmt.currency(grandTax)}</span></div>
+            <div className="portal-receipt-item portal-receipt-total">
+              <span>TOTAL</span>
+              <span className="neon-green">{fmt.currency(grandTotal)}</span>
             </div>
           </div>
 
-          {/* Payment method */}
           <div>
             <div className="form-label" style={{ marginBottom: 8 }}>Método de pago</div>
-            <div className="pay-methods">
-              <button className={`pay-method${payMethod === 'cash' ? ' active' : ''}`} onClick={() => setPayMethod('cash')}>💵 Efectivo</button>
-              <button className={`pay-method${payMethod === 'card' ? ' active' : ''}`} onClick={() => setPayMethod('card')}>💳 Tarjeta</button>
-              <button className={`pay-method${payMethod === 'transfer' ? ' active' : ''}`} onClick={() => setPayMethod('transfer')}>📲 Transferencia</button>
+            <div className="portal-pay-methods">
+              {(['cash', 'card', 'transfer'] as const).map((m) => (
+                <button key={m} className={`portal-pay-method${payMethod === m ? ' active' : ''}`} onClick={() => setPayMethod(m)}>
+                  {m === 'cash' ? '💵 Efectivo' : m === 'card' ? '💳 Tarjeta' : '📲 Transferencia'}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -339,12 +391,11 @@ export default function WaiterPortalClient() {
               <div className="form-label" style={{ marginBottom: 6 }}>Efectivo recibido</div>
               <input
                 type="number" className="form-control" placeholder="0.00" step="0.01"
-                value={cashIn} onChange={(e) => setCashIn(e.target.value)}
                 style={{ fontSize: '1.3rem', padding: '12px 16px' }}
-                autoFocus
+                value={cashIn} onChange={(e) => setCashIn(e.target.value)} autoFocus
               />
               {parseFloat(cashIn) > 0 && (
-                <div className="change-display mt-8" style={{ fontSize: '1.1rem' }}>
+                <div className="portal-change mt-8">
                   Cambio: <span className="neon-amber" style={{ fontWeight: 700 }}>{fmt.currency(change)}</span>
                 </div>
               )}
@@ -353,118 +404,195 @@ export default function WaiterPortalClient() {
 
           <button
             className="btn btn-primary btn-full"
-            style={{ padding: '16px', fontSize: '1rem', fontWeight: 700 }}
-            disabled={paying || (payMethod === 'cash' && parseFloat(cashIn) < (currentOrder.total - 0.01))}
+            style={{ padding: 16, fontSize: '1rem', fontWeight: 700 }}
+            disabled={paying || (payMethod === 'cash' && parseFloat(cashIn) < (grandTotal - 0.01))}
             onClick={processPayment}
           >
-            {paying ? 'Procesando...' : `✓ Cobrar ${fmt.currency(currentOrder.total)} y cerrar mesa`}
+            {paying ? 'Procesando...' : `✓ Cobrar ${fmt.currency(grandTotal)} y cerrar mesa`}
           </button>
-          {payMethod === 'cash' && parseFloat(cashIn) > 0 && parseFloat(cashIn) < currentOrder.total && (
-            <p className="text-xs text-muted" style={{ textAlign: 'center', color: '#ef4444' }}>
-              El efectivo ingresado no cubre el total
-            </p>
+          {payMethod === 'cash' && parseFloat(cashIn) > 0 && parseFloat(cashIn) < grandTotal && (
+            <p className="text-xs" style={{ textAlign: 'center', color: '#ef4444' }}>El efectivo no cubre el total</p>
           )}
         </div>
       </div>
     )
   }
 
-  // ─── ORDER VIEW ─────────────────────────────────────────────────
+  // ─── ORDER VIEW ────────────────────────────────────────────────
   if (view === 'order') {
-    const statusBanners: Record<string, { text: string; cls: string }> = {
-      in_kitchen: { text: '🟡 EN COCINA — preparando...', cls: 'status--kitchen' },
-      ready: { text: '✅ LISTA — llevar a la mesa', cls: 'status--ready' },
-      delivered: { text: '🍽️ ENTREGADA', cls: 'status--delivered' },
-    }
-    const banner = currentOrder ? statusBanners[currentOrder.status] : null
+    const inactiveOrders = tableOrders.filter((o) => o.status !== 'open')
 
     return (
-      <div className="portal-body" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <div className="portal-body portal-order-shell">
         <header className="portal-header">
           <div className="portal-header__left">
-            <button className="btn btn-ghost btn-sm" onClick={() => { setView('tables'); setSelectedTable(null); setCurrentOrder(null) }}>← Mesas</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setView('tables'); setSelectedTable(null); setCurrentOrder(null); setTableOrders([]) }}>← Mesas</button>
             <span className="portal-header__brand">Mesa {selectedTable?.number}</span>
-            {currentOrder && <span className="badge badge-muted text-xs">#{currentOrder.id.slice(0,6)}</span>}
+            {tableOrders.length > 1 && <span className="badge badge-muted text-xs">{tableOrders.length} comandas</span>}
           </div>
           <div className="portal-header__right">
             <span className="portal-header__staff">👤 {session.full_name}</span>
-            {currentOrder?.items.length ? (
+            {hasPayableItems && (
               <button className="btn btn-outline btn-sm" onClick={() => setView('pay')}>💳 Cobrar</button>
-            ) : null}
+            )}
           </div>
         </header>
 
-        {banner && (
-          <div className={`order-status-banner ${banner.cls}`}>{banner.text}</div>
-        )}
+        <div className="waiter-mob-tabs">
+          <button className={`waiter-mob-tab${mobileTab === 'menu' ? ' active' : ''}`} onClick={() => setMobileTab('menu')}>
+            🍽️ Menú
+          </button>
+          <button className={`waiter-mob-tab${mobileTab === 'ticket' ? ' active' : ''}`} onClick={() => setMobileTab('ticket')}>
+            🛒 Pedido
+            {itemCount > 0 && <span className="waiter-mob-badge">{itemCount}</span>}
+          </button>
+        </div>
 
-        <div className="waiter-order-layout" style={{ flex: 1, overflow: 'hidden' }}>
-          {/* Menu panel */}
-          <div className="waiter-menu-panel">
+        <div className="waiter-order-layout">
+          {/* Menú */}
+          <div className={`waiter-menu-panel${mobileTab === 'menu' ? ' mob-show' : ''}`}>
             <div className="waiter-cat-tabs">
-              <button className={`pos-cat${activeCat === 'all' ? ' active' : ''}`} onClick={() => setActiveCat('all')}>Todos</button>
+              <button className={`portal-cat-tab${activeCat === 'all' ? ' active' : ''}`} onClick={() => setActiveCat('all')}>Todos</button>
               {categories.map((c) => (
-                <button key={c.id} className={`pos-cat${activeCat === c.id ? ' active' : ''}`} onClick={() => setActiveCat(c.id)}>{c.icon} {c.name}</button>
+                <button key={c.id} className={`portal-cat-tab${activeCat === c.id ? ' active' : ''}`} onClick={() => setActiveCat(c.id)}>
+                  {c.icon} {c.name}
+                </button>
               ))}
             </div>
-            <div style={{ padding: '6px 12px' }}>
-              <input type="text" className="form-control" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <div className="waiter-search">
+              <input type="text" className="form-control" placeholder="🔍 Buscar platillo..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="waiter-items-grid">
+              {filteredItems.length === 0 && <div className="waiter-items-empty">Sin resultados para &ldquo;{search}&rdquo;</div>}
               {filteredItems.map((item) => (
                 <div key={item.id} className="waiter-item-card" onClick={() => handleItemClick(item)}>
-                  <div className="waiter-item-name">{item.name}</div>
-                  <div className="waiter-item-price">{fmt.currency(item.price)}</div>
+                  {item.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.image_url} alt={item.name} className="waiter-item-img"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  ) : (
+                    <div className="waiter-item-img-placeholder" />
+                  )}
+                  <div className="waiter-item-body">
+                    <div className="waiter-item-name">{item.name}</div>
+                    {item.description && <div className="waiter-item-desc">{item.description}</div>}
+                    <div className="waiter-item-price">{fmt.currency(item.price)}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Ticket panel */}
-          <div className="waiter-ticket">
-            <div className="waiter-ticket-header">
-              {currentOrder?.items.length ? `${currentOrder.items.reduce((s, i) => s + i.qty, 0)} items` : 'Agrega platillos'}
-            </div>
-            <div className="waiter-ticket-items">
-              {(currentOrder?.items || []).map((i) => (
-                <div key={i.dbId} className="waiter-ticket-item">
-                  <div className="ticket-item__qty">
-                    <button className="qty-btn minus" onClick={() => changeQty(i.dbId, -1)}>−</button>
-                    <span className="qty-num">{i.qty}</span>
-                    <button className="qty-btn" onClick={() => changeQty(i.dbId, 1)}>+</button>
+          {/* Ticket */}
+          <div className={`waiter-ticket${mobileTab === 'ticket' ? ' mob-show' : ''}`}>
+
+            {/* Zona scrolleable: banners + header + ítems */}
+            <div className="waiter-ticket-scroll">
+
+              {/* Comandas no editables (in_kitchen / ready / delivered) */}
+              {inactiveOrders.map((o) => (
+                <div
+                  key={o.id}
+                  className={`waiter-comanda-banner${
+                    o.status === 'in_kitchen' ? ' waiter-comanda-banner--kitchen'
+                    : o.status === 'ready' ? ' waiter-comanda-banner--ready'
+                    : ' waiter-comanda-banner--delivered'
+                  }`}
+                >
+                  <div className="waiter-comanda-banner__header">
+                    <span>
+                      {o.status === 'in_kitchen' ? '🔥 En preparación'
+                        : o.status === 'ready' ? '✅ Lista para entregar'
+                        : '🍽️ Entregada'}
+                    </span>
+                    <span className="text-xs text-muted">{fmt.currency(o.total)}</span>
                   </div>
-                  <div className="waiter-ticket-item__name">
-                    {i.name}
-                    {i.modifiers?.length ? <div className="text-xs text-muted">{modifiersSummary(i.modifiers)}</div> : null}
+                  <div className="waiter-comanda-banner__items">
+                    {o.items.map((i) => (
+                      <div key={i.dbId} className="waiter-comanda-item">
+                        <span className="waiter-comanda-item__qty">{i.qty}×</span>
+                        <span>{i.name}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="waiter-ticket-item__price">{fmt.currency(i.price * i.qty)}</div>
+                  {o.status === 'ready' && (
+                    <button className="btn btn-outline btn-full btn-sm" style={{ marginTop: 6 }} onClick={() => confirmDelivery(o)}>
+                      🍽️ Confirmar entrega en mesa
+                    </button>
+                  )}
                 </div>
               ))}
-            </div>
+
+              {/* Comanda abierta (editable) */}
+              <div className="waiter-ticket-header">
+                {currentOrder
+                  ? `${itemCount} ítem${itemCount !== 1 ? 's' : ''} — comanda abierta`
+                  : inactiveOrders.length > 0
+                    ? '+ Nueva comanda para esta mesa'
+                    : 'Selecciona platillos del menú'}
+              </div>
+
+              <div className="waiter-ticket-items">
+                {currentOrder?.items.length ? (
+                  currentOrder.items.map((i) => (
+                    <div key={i.dbId} className="waiter-ticket-item">
+                      <div className="waiter-ticket-qty">
+                        <button className="portal-qty-btn minus" onClick={() => changeQty(i.dbId, -1)}>−</button>
+                        <span className="portal-qty-num">{i.qty}</span>
+                        <button className="portal-qty-btn" onClick={() => changeQty(i.dbId, 1)}>+</button>
+                      </div>
+                      <div className="waiter-ticket-item__name">
+                        {i.name}
+                        {i.modifiers?.length ? <div className="text-xs text-muted">{modifiersSummary(i.modifiers)}</div> : null}
+                      </div>
+                      <div className="waiter-ticket-item__price">{fmt.currency(i.price * i.qty)}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="waiter-ticket-empty">
+                    <span style={{ fontSize: '2rem' }}>🍽️</span>
+                    <span className="text-muted text-sm">
+                      {inactiveOrders.length > 0 ? 'Toca un platillo para agregar una nueva comanda' : 'Agrega platillos desde el menú'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+            </div>{/* /waiter-ticket-scroll */}
+
             {currentOrder?.items.length ? (
               <>
                 <div className="waiter-ticket-totals">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem', color: 'var(--text-muted)' }}>
-                    <span>Subtotal</span><span>{fmt.currency(currentOrder.subtotal)}</span>
+                  <div className="waiter-ticket-subtotal">
+                    <span>Subtotal comanda</span><span>{fmt.currency(currentOrder.subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontWeight: 600 }}>TOTAL</span>
-                    <span className="waiter-ticket-total">{fmt.currency(currentOrder.total)}</span>
+                  {tableOrders.length > 1 && (
+                    <div className="waiter-ticket-subtotal" style={{ color: 'var(--text-secondary)' }}>
+                      <span>Total mesa ({tableOrders.length} comandas)</span><span>{fmt.currency(grandTotal)}</span>
+                    </div>
+                  )}
+                  <div className="waiter-ticket-total-row">
+                    <span>TOTAL MESA</span>
+                    <span className="waiter-ticket-total">{fmt.currency(grandTotal)}</span>
                   </div>
                 </div>
                 <div className="waiter-ticket-actions">
-                  <div>
-                    <input type="text" className="form-control" placeholder="Nota para cocina..." value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} style={{ fontSize: '.8rem' }} />
-                  </div>
-                  <button className="btn btn-amber btn-full btn-sm" onClick={sendToKitchen}
-                    disabled={currentOrder.status === 'in_kitchen'}>
-                    {currentOrder.status === 'in_kitchen' ? '🔥 En cocina...' : '👨‍🍳 Enviar a Cocina'}
+                  <input type="text" className="form-control" placeholder="Nota para cocina (opcional)..."
+                    value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} style={{ fontSize: '.8rem' }} />
+                  <button className="btn btn-amber btn-full btn-sm" onClick={sendToKitchen}>
+                    👨‍🍳 Enviar a Cocina
                   </button>
                   <button className="btn btn-primary btn-full btn-sm" onClick={() => setView('pay')}>
-                    💳 Cobrar {fmt.currency(currentOrder.total)}
+                    💳 Cobrar {fmt.currency(grandTotal)}
                   </button>
                 </div>
               </>
+            ) : hasPayableItems ? (
+              <div className="waiter-ticket-actions">
+                <button className="btn btn-primary btn-full btn-sm" onClick={() => setView('pay')}>
+                  💳 Cobrar {fmt.currency(grandTotal)}
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -481,7 +609,7 @@ export default function WaiterPortalClient() {
     )
   }
 
-  // ─── TABLES VIEW ────────────────────────────────────────────────
+  // ─── TABLES VIEW ───────────────────────────────────────────────
   return (
     <div className="portal-body">
       <header className="portal-header">
@@ -492,28 +620,30 @@ export default function WaiterPortalClient() {
         <div className="portal-header__right">
           {readyAlert.size > 0 && (
             <span className="badge badge-amber" style={{ animation: 'pulse-table 2s infinite' }}>
-              🔔 {readyAlert.size} listo{readyAlert.size > 1 ? 's' : ''}
+              🔔 {readyAlert.size} lista{readyAlert.size !== 1 ? 's' : ''}
             </span>
           )}
           <button className="btn btn-ghost btn-sm" onClick={async () => { await logoutPin(); setSession(null) }}>⏻ Salir</button>
         </div>
       </header>
 
-      <div style={{ padding: '8px 16px' }}>
-        <div style={{ display: 'flex', gap: 12, fontSize: '.78rem', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} /> Disponible</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--border-lit)', display: 'inline-block' }} /> Ocupada</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }} /> Lista para entregar</span>
-        </div>
+      <div className="portal-legend">
+        <span className="portal-legend-item"><span className="portal-legend-dot dot-green" /> Disponible</span>
+        <span className="portal-legend-item"><span className="portal-legend-dot dot-muted" /> Ocupada</span>
+        <span className="portal-legend-item"><span className="portal-legend-dot dot-amber pulse-legend" /> Lista</span>
       </div>
 
       <div className="waiter-tables-grid">
         {tables.map((t) => {
-          const orderStatus = tableStatus[t.id]
+          const orderSt = tableStatus[t.id]
           const isReady = readyAlert.has(t.id)
-          const cardCls = isReady ? 'waiter-table-card--ready' : ROLE_BADGE[t.status] ?? 'waiter-table-card--occupied'
-          const statusLabel = isReady ? '✅ LISTO' : t.status === 'available' ? 'Libre' : t.status === 'reserved' ? 'Reservada' : t.status === 'maintenance' ? 'Mantenim.' : orderStatus === 'in_kitchen' ? '🔥 Cocina' : 'Ocupada'
-
+          const cardCls = isReady ? 'waiter-table-card--ready' : TABLE_CARD_CLS[t.status] ?? 'waiter-table-card--occupied'
+          const label = isReady ? '✅ Lista'
+            : t.status === 'available' ? 'Libre'
+            : t.status === 'reserved' ? 'Reservada'
+            : t.status === 'maintenance' ? 'Manten.'
+            : orderSt === 'in_kitchen' ? '🔥 Cocina'
+            : 'Ocupada'
           return (
             <div
               key={t.id}
@@ -521,10 +651,8 @@ export default function WaiterPortalClient() {
               onClick={() => t.status !== 'maintenance' ? selectTable(t) : undefined}
             >
               <div className="waiter-table-num">{t.number}</div>
-              <div className="waiter-table-loc">{t.location}</div>
-              {isReady
-                ? <div className="waiter-table-badge">✅ LISTO</div>
-                : <div className="waiter-table-status text-xs" style={{ opacity: .7 }}>{statusLabel}</div>}
+              {t.location && <div className="waiter-table-loc">{t.location}</div>}
+              <div className={`waiter-table-label${isReady ? ' label-ready' : ''}`}>{label}</div>
             </div>
           )
         })}

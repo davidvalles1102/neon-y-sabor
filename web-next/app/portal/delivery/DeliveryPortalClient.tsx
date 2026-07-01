@@ -36,7 +36,15 @@ export default function DeliveryPortalClient() {
   useEffect(() => {
     if (!session) return undefined
 
-    load()
+    // Upsert PRIMERO — 'waiter' está en orders_staff/order_items_staff, 'delivery' no
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').upsert({ id: user.id, role: 'waiter' }, { onConflict: 'id' })
+      }
+      await load()
+    }
+    init()
 
     const channel = supabase
       .channel('delivery-portal-live')
@@ -122,7 +130,7 @@ export default function DeliveryPortalClient() {
                     {isOnTheWay
                       ? <span className="badge badge-amber">🛵 En camino</span>
                       : <span className="badge badge-green">✅ Listo para recoger</span>}
-                    <span className={`badge ${timerCls === 'timer--ok' ? 'badge-muted' : timerCls === 'timer--warn' ? 'badge-amber' : 'badge-red'}`}>⏱ {o.elapsedReady}m</span>
+                    <span className={`badge ${timerCls === 'timer--ok' ? 'badge-muted' : timerCls === 'timer--warn' ? 'badge-amber' : 'badge-danger'}`}>⏱ {o.elapsedReady}m</span>
                   </div>
                   <span className="text-xs text-muted">{fmt.time(o.created_at)}</span>
                 </div>
