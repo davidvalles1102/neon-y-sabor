@@ -23,7 +23,7 @@ export default async function HomePage() {
       <header className="hero">
         <div className="hero__bg-grid"></div>
         <div className="hero__content">
-          <p className="hero__eyebrow neon-amber">Piamonte, Cauca · Lun–Dom 6:30–15:30 y 16:00–23:00</p>
+          <p className="hero__eyebrow neon-amber">San Salvador, El Salvador · Lun–Vie: 11AM–2:30PM &amp; 6–10:30PM · Sáb–Dom: 11AM–10:30PM</p>
           <h1 className="hero__title">
             <span className="neon-green">CRUNCHIES</span>
           </h1>
@@ -57,9 +57,9 @@ export default async function HomePage() {
       <footer className="cust-footer">
         <div className="footer-brand">CRUNCHIES</div>
         <div className="footer-details">
-          <span>📍 Piamonte, Cauca, Colombia</span>
+          <span>📍 Ave La Reyna, Entre PJE 7 Y 1de Mayo, San Salvador, El Salvador</span>
           <span>📞 312 828 2045</span>
-          <span>🕐 Lun–Dom: 6:30 am – 3:30 pm · 4:00 pm – 11:00 pm</span>
+          <span>🕐 Lun–Vie: 11:00 AM – 2:30 PM · 6:00 PM – 10:30 PM | Sáb–Dom: 11:00 AM – 10:30 PM</span>
         </div>
         <div className="footer-divider"></div>
         <p className="footer-copy">© 2026 Crunchies — Todos los derechos reservados</p>
