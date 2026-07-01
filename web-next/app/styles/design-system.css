@@ -452,6 +452,12 @@ select.form-control { appearance: none; cursor: pointer; }
 ::-webkit-scrollbar-thumb { background: var(--bg-5); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
 
+/* ─── Touch tap targets (≥44px) ─────────────────────────────── */
+@media (max-width: 768px) {
+  .btn    { min-height: 44px; }
+  .btn-sm { min-height: 44px; }
+}
+
 /* ─── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

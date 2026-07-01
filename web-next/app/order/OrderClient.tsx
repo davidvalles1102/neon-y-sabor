@@ -177,7 +177,7 @@ export default function OrderClient({
   }
 
   return (
-    <div className="order-layout">
+    <div className="order-layout" style={!ORDERING_ENABLED ? { paddingTop: 0 } : undefined}>
       <div className="order-menu-panel" style={!ORDERING_ENABLED ? { maxWidth: '100%', flex: '1 1 100%' } : undefined}>
         <div className="order-panel-header">
           <h2>{ORDERING_ENABLED ? '¿Qué vas a pedir?' : 'Nuestro Menú'}</h2>

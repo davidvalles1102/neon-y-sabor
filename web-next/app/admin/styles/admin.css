@@ -1120,6 +1120,11 @@
 }
 .mob-cart-fab { display: none; } /* estado base antes del media query */
 
+/* ─── POS ticket: reduce height en teléfonos muy bajos (landscape) ─── */
+@media (max-width: 768px) and (max-height: 600px) {
+  .pos-ticket-panel { height: 55vh !important; max-height: 55vh !important; }
+}
+
 /* ─── Tweaks generales móvil ──────────────────────────────────── */
 @media (max-width: 640px) {
   .admin-content    { padding: 14px; }
