@@ -53,7 +53,7 @@ export default function SuccessModal({
                 <div style={{ background: 'rgba(0,220,130,.08)', border: '1px solid var(--green-dim)', borderRadius: 'var(--r-md)', padding: '10px 14px', marginTop: 8 }}>
                   <div style={{ fontWeight: 600, color: 'var(--green)', marginBottom: 4 }}>📱 Pago por Nequi</div>
                   <div style={{ fontSize: '.82rem', color: 'var(--text-secondary)' }}>
-                    Transfiere <strong>{fmt.currency(total)}</strong> al número <strong>312 828 2045</strong> si aún no lo has hecho.
+                    Transfiere <strong>{fmt.currency(total)}</strong> al número <strong>+503 7311 8276</strong> si aún no lo has hecho.
                   </div>
                 </div>
               ) : (

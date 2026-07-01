@@ -343,7 +343,7 @@ export default function OrderClient({
                 <span style={{ fontSize: '1.3rem' }}>📱</span>
                 <strong className="neon-green">Transferir por Nequi</strong>
               </div>
-              <div className="nequi-number">312 828 2045</div>
+              <div className="nequi-number">+503 7311 8276</div>
               <p className="text-xs text-muted mt-6">
                 Transfiere el total al número de arriba antes de enviar tu pedido.
                 El restaurante verificará el pago.

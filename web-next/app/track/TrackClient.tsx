@@ -189,7 +189,7 @@ export default function TrackClient() {
           {isNequi ? (
             <div>
               <div style={{ color: 'var(--green)', fontWeight: 600, marginBottom: 6 }}>📱 Nequi</div>
-              <div className={styles['track-nequi-number']}>312 828 2045</div>
+              <div className={styles['track-nequi-number']}>+503 7311 8276</div>
               <p className="text-xs text-muted">Recuerda transferir {fmt.currency(order.total)} si aún no lo has hecho.</p>
             </div>
           ) : (

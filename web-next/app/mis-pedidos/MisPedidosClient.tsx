@@ -195,7 +195,7 @@ export default function MisPedidosClient() {
           <div className="form-group" style={{ flex: 1, margin: 0 }}>
             <label className="form-label">Número de teléfono con el que hiciste el pedido</label>
             <input
-              type="tel" className="form-control" placeholder="Ej. 312 828 2045" autoComplete="tel"
+              type="tel" className="form-control" placeholder="Ej. +503 7311 8276" autoComplete="tel"
               value={phone} onChange={(e) => setPhone(e.target.value)}
             />
           </div>
