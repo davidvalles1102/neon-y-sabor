@@ -12,6 +12,8 @@ import ModifierModal from './ModifierModal'
 import SuccessModal from './SuccessModal'
 import './order.css'
 
+const ORDERING_ENABLED = false
+
 type CartLine = {
   id: string
   name: string
@@ -176,13 +178,15 @@ export default function OrderClient({
 
   return (
     <div className="order-layout">
-      <div className="order-menu-panel">
+      <div className="order-menu-panel" style={!ORDERING_ENABLED ? { maxWidth: '100%', flex: '1 1 100%' } : undefined}>
         <div className="order-panel-header">
           <h2>¿Qué vas a pedir?</h2>
-          <div className="order-type-tabs">
-            <button className={`order-type-btn${orderType === 'takeout' ? ' active' : ''}`} onClick={() => setOrderType('takeout')}>🥡 Para Llevar</button>
-            <button className={`order-type-btn${orderType === 'delivery' ? ' active' : ''}`} onClick={() => setOrderType('delivery')}>🛵 Domicilio</button>
-          </div>
+          {ORDERING_ENABLED && (
+            <div className="order-type-tabs">
+              <button className={`order-type-btn${orderType === 'takeout' ? ' active' : ''}`} onClick={() => setOrderType('takeout')}>🥡 Para Llevar</button>
+              <button className={`order-type-btn${orderType === 'delivery' ? ' active' : ''}`} onClick={() => setOrderType('delivery')}>🛵 Domicilio</button>
+            </div>
+          )}
         </div>
 
         <div className="order-cat-tabs">
@@ -238,7 +242,7 @@ export default function OrderClient({
         </div>
       </div>
 
-      <div className="order-cart-panel">
+      {ORDERING_ENABLED && <div className="order-cart-panel">
         <div className="cart-header">
           <h3>Tu Orden</h3>
           <span className="badge badge-green">{cart.reduce((s, i) => s + i.qty, 0)} items</span>
@@ -358,7 +362,7 @@ export default function OrderClient({
             {placing ? 'Enviando pedido...' : 'Hacer Pedido'}
           </button>
         </div>
-      </div>
+      </div>}
 
       {modalState && (
         <ModifierModal

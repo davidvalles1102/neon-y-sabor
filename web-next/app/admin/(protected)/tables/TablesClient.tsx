@@ -46,7 +46,7 @@ export default function TablesClient() {
 
   const showMenuQR = () => {
     setActiveQR({ type: 'menu' })
-    setQrUrl(`${window.location.origin}/`)
+    setQrUrl(`${window.location.origin}/order`)
   }
 
   const closeModal = () => { setActiveQR(null); setQrUrl('') }
