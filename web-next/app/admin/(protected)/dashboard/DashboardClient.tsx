@@ -80,7 +80,7 @@ export default function DashboardClient() {
         supabase.from('payments').select('method, amount').gte('created_at', `${today}T00:00:00`),
         supabase.from('order_items').select('item_name, quantity, item_price').gte('created_at', `${today}T00:00:00`),
         supabase.from('expenses').select('amount').eq('expense_date', today),
-        supabase.from('orders').select('*, restaurant_tables(number)').order('created_at', { ascending: false }).limit(8),
+        supabase.from('orders').select('*, restaurant_tables(number)').gte('created_at', `${today}T00:00:00`).order('created_at', { ascending: false }).limit(8),
       ])
 
       setSalesToday((todayOrders || []).reduce((s, p) => s + Number(p.amount), 0))
