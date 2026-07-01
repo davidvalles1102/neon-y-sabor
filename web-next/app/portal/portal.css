@@ -1,0 +1,912 @@
+/* ================================================================
+   Portal Styles — Crunchies Staff Portals (Kitchen / Delivery / Waiter)
+   Mobile-first, touch-optimized
+   ================================================================ */
+
+/* ─── Shell ──────────────────────────────────────────────────────── */
+.portal-body {
+  min-height: 100vh;
+  background: var(--bg-0);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Order view needs a fixed viewport height to keep layout stable */
+.portal-order-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────── */
+.portal-header {
+  height: 54px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  flex-shrink: 0;
+}
+
+.portal-header__left  { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.portal-header__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.portal-header__brand {
+  font-family: var(--font-d);
+  font-size: 1rem;
+  color: var(--green);
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.portal-header__staff { font-size: .78rem; color: var(--text-secondary); white-space: nowrap; }
+
+/* ─── PIN Screen ─────────────────────────────────────────────────── */
+.pin-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-0);
+  gap: 28px;
+  padding: 24px;
+}
+
+.pin-icon { font-size: 3.5rem; line-height: 1; }
+.pin-portal-name {
+  font-family: var(--font-d);
+  font-size: 1.6rem;
+  color: var(--green);
+  letter-spacing: .08em;
+}
+.pin-sub { font-size: .85rem; color: var(--text-muted); margin-top: -14px; }
+
+.pin-display { display: flex; gap: 14px; align-items: center; height: 28px; }
+.pin-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-lit);
+  background: transparent;
+  transition: background .12s, border-color .12s;
+}
+.pin-dot--filled { background: var(--green); border-color: var(--green); }
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 82px);
+  gap: 10px;
+}
+.pin-key {
+  height: 82px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  transition: background .1s, transform .08s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.pin-key:active { background: var(--bg-3); transform: scale(.94); }
+.pin-key--del   { font-size: 1.2rem; color: var(--text-secondary); }
+.pin-key--empty { visibility: hidden; pointer-events: none; }
+
+.pin-error   { height: 20px; color: #ef4444; font-size: .85rem; text-align: center; }
+.pin-loading { color: var(--text-muted); font-size: .85rem; }
+
+/* ─── Table legend ────────────────────────────────────────────────── */
+.portal-legend {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px;
+  font-size: .75rem;
+  flex-wrap: wrap;
+}
+.portal-legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.portal-legend-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-green  { background: var(--green); }
+.dot-muted  { background: var(--border-lit); }
+.dot-amber  { background: var(--amber); }
+
+@keyframes pulse-table {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 153, 0, .35); }
+  50%       { box-shadow: 0 0 0 10px rgba(255, 153, 0, 0); }
+}
+.pulse-legend { animation: pulse-table 2s infinite; }
+
+/* ─── Tables Grid ────────────────────────────────────────────────── */
+.waiter-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  padding: 12px 16px 24px;
+}
+
+@media (min-width: 480px)  { .waiter-tables-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } }
+@media (min-width: 768px)  { .waiter-tables-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; } }
+@media (min-width: 1024px) { .waiter-tables-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; padding: 20px 24px 40px; } }
+
+.waiter-table-card {
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 4px;
+  transition: transform .1s, box-shadow .1s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  padding: 8px;
+}
+.waiter-table-card:active { transform: scale(.95); }
+
+.waiter-table-card--available {
+  background: rgba(255, 102, 0, .07);
+  border-color: var(--green);
+}
+.waiter-table-card--available .waiter-table-num { color: var(--green); }
+
+.waiter-table-card--occupied {
+  background: var(--bg-2);
+  border-color: var(--border-lit);
+}
+.waiter-table-card--occupied .waiter-table-num { color: var(--text-primary); }
+
+.waiter-table-card--ready {
+  background: rgba(255, 153, 0, .10);
+  border-color: var(--amber);
+  animation: pulse-table 2s infinite;
+}
+.waiter-table-card--ready .waiter-table-num { color: var(--amber); }
+
+.waiter-table-card--reserved {
+  background: rgba(99, 102, 241, .08);
+  border-color: rgba(99, 102, 241, .35);
+}
+.waiter-table-card--reserved .waiter-table-num { color: #818cf8; }
+
+.waiter-table-card--maintenance {
+  background: var(--bg-1);
+  border-color: var(--border);
+  opacity: .4;
+  pointer-events: none;
+}
+
+.waiter-table-num   { font-size: 2rem; font-weight: 700; line-height: 1; }
+.waiter-table-loc   { font-size: .62rem; color: var(--text-muted); text-align: center; }
+.waiter-table-label {
+  font-size: .65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-3);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.waiter-table-label.label-ready {
+  background: var(--amber);
+  color: #000;
+}
+
+/* ─── Order view shell ────────────────────────────────────────────── */
+.waiter-order-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Mobile tab bar (hidden on desktop) ─────────────────────────── */
+.waiter-mob-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .waiter-mob-tabs { display: none; }
+}
+
+.waiter-mob-tab {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  background: var(--bg-1);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: color .15s, background .15s;
+  border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.waiter-mob-tab.active {
+  color: var(--green);
+  background: var(--bg-0);
+  border-bottom-color: var(--green);
+}
+.waiter-mob-badge {
+  background: var(--green);
+  color: #fff;
+  border-radius: 20px;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ─── Menu panel ─────────────────────────────────────────────────── */
+.waiter-menu-panel {
+  display: none;          /* hidden by default on mobile */
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  flex: 1;
+}
+/* Show on desktop always */
+@media (min-width: 768px) {
+  .waiter-menu-panel { display: flex; }
+}
+/* Show on mobile when tab is active */
+.waiter-menu-panel.mob-show { display: flex; }
+
+.waiter-cat-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.waiter-cat-tabs::-webkit-scrollbar { display: none; }
+
+/* Category tab — matches admin .pos-cat style */
+.portal-cat-tab {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: .82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg-3);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--t);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.portal-cat-tab:hover  { background: var(--bg-4); color: var(--text-primary); border-color: var(--border-lit); }
+.portal-cat-tab.active { background: var(--green-dark); color: var(--green); border-color: var(--green-dim); }
+
+.waiter-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ─── Items grid ─────────────────────────────────────────────────── */
+.waiter-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: start;
+}
+@media (min-width: 480px)  { .waiter-items-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+@media (min-width: 1024px) { .waiter-items-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 12px 16px; } }
+
+.waiter-items-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: .85rem;
+}
+
+/* Item card — consistent with admin pos-item-card */
+.waiter-item-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color .12s, background .12s, transform .08s;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+}
+.waiter-item-card:hover  { border-color: var(--green-dim); background: var(--bg-4); transform: translateY(-2px); box-shadow: 0 4px 16px var(--green-alpha); }
+.waiter-item-card:active { transform: scale(.97); box-shadow: none; }
+
+.waiter-item-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-4);
+}
+.waiter-item-img-placeholder {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-4);
+}
+
+.waiter-item-body {
+  padding: 10px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.waiter-item-name  { font-size: .84rem; font-weight: 600; line-height: 1.25; color: var(--text-primary); }
+.waiter-item-desc  { font-size: .72rem; color: var(--text-muted); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.waiter-item-price { font-size: .95rem; font-weight: 700; color: var(--amber); margin-top: auto; padding-top: 4px; }
+
+/* ─── Ticket panel ───────────────────────────────────────────────── */
+.waiter-ticket {
+  display: none;          /* hidden by default on mobile */
+  flex-direction: column;
+  background: var(--bg-1);
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .waiter-ticket { display: flex; }
+}
+/* Mobile: show full-width when tab active */
+.waiter-ticket.mob-show {
+  display: flex;
+  width: 100%;
+  border-left: none;
+  flex: 1;
+}
+
+.waiter-ticket-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.waiter-ticket-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: .88rem;
+  color: var(--text-secondary);
+}
+
+.waiter-ticket-items {
+  padding: 6px 0;
+}
+
+.waiter-ticket-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.waiter-ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: .85rem;
+}
+.waiter-ticket-item:last-child { border-bottom: none; }
+
+.waiter-ticket-qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Quantity controls — matches admin .qty-btn style */
+.portal-qty-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-lit);
+  background: var(--bg-3);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .1s, color .1s, background .1s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.portal-qty-btn:hover  { border-color: var(--green); color: var(--green); background: var(--green-alpha); }
+.portal-qty-btn.minus:hover { border-color: var(--danger); color: var(--danger); }
+.portal-qty-num { font-weight: 700; min-width: 20px; text-align: center; font-size: .88rem; }
+
+.waiter-ticket-item__name  { flex: 1; min-width: 0; }
+.waiter-ticket-item__price { color: var(--amber); white-space: nowrap; font-weight: 600; font-size: .82rem; }
+
+.waiter-ticket-totals {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+.waiter-ticket-subtotal {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.waiter-ticket-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: .95rem;
+}
+.waiter-ticket-total { color: var(--green); font-size: 1.15rem; }
+
+.waiter-ticket-actions {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ─── Order status banner ─────────────────────────────────────────── */
+.portal-order-status {
+  margin: 0 12px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  font-size: .82rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: .02em;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+.portal-order-status.status--kitchen  { background: rgba(255, 153, 0, .12); color: var(--amber); border: 1px solid var(--amber-dim); }
+.portal-order-status.status--ready    { background: var(--green-alpha); color: var(--green); border: 1px solid var(--green-dim); animation: pulse-banner 2s ease-in-out infinite; }
+.portal-order-status.status--delivered{ background: var(--bg-2); color: var(--text-muted); border: 1px solid var(--border); }
+@keyframes pulse-banner { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+
+/* ─── Pay view ───────────────────────────────────────────────────── */
+.portal-pay-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+/* Receipt rows in pay view */
+.portal-receipt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.portal-receipt-item:last-child { border-bottom: none; }
+.portal-receipt-total {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 6px;
+  border-top: 1px solid var(--border-lit);
+  border-bottom: none;
+  padding-top: 8px;
+}
+
+/* Payment method selector */
+.portal-pay-methods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.portal-pay-method {
+  padding: 12px 6px;
+  border-radius: var(--r-md);
+  font-size: .8rem;
+  font-weight: 600;
+  background: var(--bg-3);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-lit);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.portal-pay-method:hover  { background: var(--bg-4); color: var(--text-primary); }
+.portal-pay-method.active { background: var(--green-alpha); color: var(--green); border-color: var(--green-dim); }
+
+.portal-change { font-size: .9rem; color: var(--text-secondary); }
+
+/* ─── Delivery Portal ────────────────────────────────────────────── */
+.delivery-portal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+}
+.delivery-portal-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.delivery-portal-card--on-the-way { border-color: var(--amber); }
+.delivery-portal-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.delivery-portal-card__address {
+  font-size: 1.1rem; font-weight: 700; color: var(--amber);
+  padding: 14px 16px 6px; line-height: 1.3;
+}
+.delivery-portal-card__customer {
+  padding: 0 16px 10px;
+  font-size: .85rem; color: var(--text-secondary);
+}
+.delivery-portal-card__items {
+  padding: 10px 16px;
+  font-size: .85rem;
+  border-top: 1px solid var(--border);
+}
+.delivery-portal-card__actions {
+  display: flex; gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Staff Admin ────────────────────────────────────────────────── */
+.staff-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.staff-card--inactive { opacity: .5; }
+.staff-card__info { display: flex; flex-direction: column; gap: 3px; }
+.staff-card__name { font-weight: 600; font-size: .95rem; }
+.staff-card__meta { font-size: .78rem; color: var(--text-muted); }
+.staff-card__pin {
+  font-family: monospace;
+  font-size: 1.1rem;
+  letter-spacing: .15em;
+  color: var(--text-secondary);
+  background: var(--bg-3);
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+.staff-card__actions { display: flex; gap: 6px; align-items: center; }
+
+.perf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.perf-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px;
+}
+.perf-card__name { font-weight: 700; font-size: 1rem; margin-bottom: 12px; }
+.perf-stat { display: flex; justify-content: space-between; font-size: .85rem; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.perf-stat:last-child { border-bottom: none; }
+.perf-stat__val { font-weight: 600; color: var(--amber); }
+
+/* ─── Role badges ────────────────────────────────────────────────── */
+.role-badge-kitchen  { background: rgba(255,153,0,.15);   color: var(--amber); border: 1px solid rgba(255,153,0,.3); }
+.role-badge-delivery { background: rgba(255,102,0,.12);   color: var(--green); border: 1px solid rgba(255,102,0,.3); }
+.role-badge-waiter   { background: rgba(99,102,241,.12);  color: #818cf8;      border: 1px solid rgba(99,102,241,.3); }
+
+/* ─── Portal section title ───────────────────────────────────────── */
+.portal-section-title {
+  padding: 14px 16px 8px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Kitchen Portal — KDS (Kitchen Display System)
+   FIFO: las órdenes se muestran de la más antigua a la más reciente
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Layout de dos columnas: En cocina | Listos */
+.kitchen-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  height: calc(100dvh - 54px); /* 54px = portal-header */
+}
+@media (max-width: 767px) {
+  .kitchen-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+/* Columna (En cocina / Listos) */
+.kitchen-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+.kitchen-col:last-child { border-right: none; }
+
+.kitchen-col__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-1);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+/* Área scrollable de tarjetas */
+.kitchen-orders {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kitchen-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .9rem;
+  padding: 48px 16px;
+}
+
+/* ── Tarjeta de orden ── */
+.kitchen-card {
+  background: var(--bg-1);
+  border: 2px solid var(--border-lit);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.kitchen-card--ready {
+  border-color: var(--green);
+  background: rgba(102, 255, 102, .03);
+}
+.kitchen-card--urgent {
+  border-color: #ef4444;
+  animation: pulse-urgent 2s ease-in-out infinite;
+}
+@keyframes pulse-urgent {
+  0%, 100% { border-color: #ef4444; }
+  50%       { border-color: rgba(239, 68, 68, .35); }
+}
+
+/* Cabecera de la tarjeta: número de mesa + timer */
+.kitchen-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  gap: 10px;
+}
+
+.kitchen-card__table {
+  font-family: var(--font-d);
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--amber);
+  line-height: 1;
+  white-space: nowrap;
+}
+.kitchen-card--ready .kitchen-card__table { color: var(--green); }
+
+.kitchen-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.kitchen-card__timer {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.timer--ok     { background: rgba(102,255,102,.12); color: var(--green); }
+.timer--warn   { background: rgba(255,153,0,.15);  color: var(--amber); }
+.timer--urgent { background: rgba(239,68,68,.15);  color: #ef4444; }
+
+.kitchen-card__order-type {
+  font-size: .7rem;
+  color: var(--text-muted);
+  letter-spacing: .04em;
+}
+
+/* Lista de ítems */
+.kitchen-card__items {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kitchen-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.kitchen-item:last-child { border-bottom: none; }
+
+/* Círculo con la cantidad — MUY visible */
+.kitchen-item__qty {
+  min-width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #000;
+  font-size: 1.2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.kitchen-card--ready .kitchen-item__qty { background: var(--green); }
+
+.kitchen-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kitchen-item__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.kitchen-item__mod {
+  font-size: .82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.kitchen-item__note {
+  font-size: .82rem;
+  color: var(--amber);
+}
+
+/* Nota general de la orden */
+.kitchen-card__note {
+  margin: 0 14px 10px;
+  padding: 8px 12px;
+  background: rgba(255,153,0,.08);
+  border: 1px solid rgba(255,153,0,.25);
+  border-radius: var(--r-sm);
+  font-size: .88rem;
+  color: var(--amber);
+  line-height: 1.4;
+}
+
+/* Acciones */
+.kitchen-card__actions {
+  padding: 10px 14px 14px;
+  display: flex;
+  gap: 8px;
+}
+.kitchen-card__actions .btn { flex: 1; padding: 12px 8px; font-size: .9rem; }
+
+/* ─── Waiter status info banners ────────────────────────────────── */
+.waiter-status-info {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: .85rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+}
+.waiter-status-info--kitchen {
+  background: rgba(255,153,0,.10);
+  color: var(--amber);
+  border: 1px solid var(--amber-dim);
+}
+
+/* ─── Comanda banners (comandas no editables dentro del ticket) ── */
+.waiter-comanda-banner {
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-lit);
+  background: var(--bg-2);
+}
+.waiter-comanda-banner--kitchen {
+  border-color: var(--amber-dim);
+  background: rgba(255,153,0,.06);
+}
+.waiter-comanda-banner--ready {
+  border-color: var(--green-dim);
+  background: rgba(102,255,102,.06);
+}
+.waiter-comanda-banner--delivered {
+  opacity: .65;
+}
+.waiter-comanda-banner__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.waiter-comanda-banner--kitchen .waiter-comanda-banner__header { color: var(--amber); }
+.waiter-comanda-banner--ready    .waiter-comanda-banner__header { color: var(--green); }
+.waiter-comanda-banner__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.waiter-comanda-item {
+  font-size: .83rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 5px;
+}
+.waiter-comanda-item__qty { font-weight: 700; color: var(--text-primary); }

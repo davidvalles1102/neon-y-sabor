@@ -1171,3 +1171,18 @@
 .mb-20 { margin-bottom: 20px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+/* ─── Order status banner (POS ticket) ──────────────────────── */
+#orderStatusBanner {
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  font-size: .82rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: .02em;
+}
+#orderStatusBanner.status--kitchen  { background: rgba(255,180,0,.12); color: var(--amber); border: 1px solid var(--amber-dim); }
+#orderStatusBanner.status--ready    { background: rgba(0,220,130,.12); color: var(--green); border: 1px solid var(--green-dim); animation: pulse-banner 2s ease-in-out infinite; }
+#orderStatusBanner.status--delivered{ background: var(--bg-2); color: var(--text-muted); border: 1px solid var(--border); }
+@keyframes pulse-banner { 0%,100% { opacity:1 } 50% { opacity:.6 } }
