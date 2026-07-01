@@ -1,0 +1,59 @@
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+.tbl-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color var(--t);
+}
+.tbl-card--available  { border-color: var(--green-dim); }
+.tbl-card--occupied   { border-color: var(--danger); }
+.tbl-card--reserved   { border-color: var(--amber-dim); }
+.tbl-card--maintenance{ border-color: var(--border); }
+.tbl-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.tbl-card__num {
+  font-family: var(--font-d);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.tbl-card--available  .tbl-card__num { color: var(--green); text-shadow: var(--glow-green-s); }
+.tbl-card--occupied   .tbl-card__num { color: var(--danger); }
+.tbl-card--reserved   .tbl-card__num { color: var(--amber); }
+.tbl-card--maintenance .tbl-card__num { color: var(--text-muted); }
+.tbl-card__meta {
+  font-size: .78rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+.tbl-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+/* QR Modal */
+.qr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.qr-url {
+  font-size: .7rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+  max-width: 280px;
+}
