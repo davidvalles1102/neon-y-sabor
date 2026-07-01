@@ -180,7 +180,7 @@ export default function OrderClient({
     <div className="order-layout">
       <div className="order-menu-panel" style={!ORDERING_ENABLED ? { maxWidth: '100%', flex: '1 1 100%' } : undefined}>
         <div className="order-panel-header">
-          <h2>¿Qué vas a pedir?</h2>
+          <h2>{ORDERING_ENABLED ? '¿Qué vas a pedir?' : 'Nuestro Menú'}</h2>
           {ORDERING_ENABLED && (
             <div className="order-type-tabs">
               <button className={`order-type-btn${orderType === 'takeout' ? ' active' : ''}`} onClick={() => setOrderType('takeout')}>🥡 Para Llevar</button>
@@ -212,7 +212,8 @@ export default function OrderClient({
                 <div
                   key={item.id}
                   className={`order-item-card${!item.available ? ' order-item-card--unavail' : ''}`}
-                  onClick={() => handleItemClick(item)}
+                  onClick={ORDERING_ENABLED ? () => handleItemClick(item) : undefined}
+                  style={!ORDERING_ENABLED ? { cursor: 'default' } : undefined}
                 >
                   {item.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -232,7 +233,7 @@ export default function OrderClient({
                     {item.description && <div className="order-item-desc">{item.description}</div>}
                     <div className="order-item-footer">
                       <span className="order-item-price">{fmt.currency(item.price)}</span>
-                      <div className="order-item-add">+</div>
+                      {ORDERING_ENABLED && <div className="order-item-add">+</div>}
                     </div>
                   </div>
                 </div>
