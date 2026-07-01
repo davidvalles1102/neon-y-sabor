@@ -80,7 +80,7 @@ export default function KitchenPortalClient() {
   }
 
   return (
-    <div className="portal-body" style={{ height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="portal-body">
       <header className="portal-header">
         <div className="portal-header__left">
           <span className="portal-header__brand">CRUNCHIES — COCINA</span>

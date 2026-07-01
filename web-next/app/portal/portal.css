@@ -40,8 +40,13 @@
   color: var(--green);
   letter-spacing: .08em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .portal-header__staff { font-size: .78rem; color: var(--text-secondary); white-space: nowrap; }
+@media (max-width: 479px) {
+  .portal-header__staff { display: none; }
+}
 
 /* ─── PIN Screen ─────────────────────────────────────────────────── */
 .pin-screen {
@@ -518,6 +523,8 @@
   gap: 8px;
 }
 .portal-receipt-item:last-child { border-bottom: none; }
+.portal-receipt-item > span:first-child { flex: 1; min-width: 0; }
+.portal-receipt-item > span:last-child  { flex-shrink: 0; white-space: nowrap; }
 .portal-receipt-total {
   font-weight: 700;
   font-size: 1.1rem;
@@ -666,7 +673,9 @@
 @media (max-width: 767px) {
   .kitchen-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
+    overflow: visible;
   }
 }
 
@@ -678,6 +687,14 @@
   border-right: 1px solid var(--border);
 }
 .kitchen-col:last-child { border-right: none; }
+@media (max-width: 767px) {
+  .kitchen-col {
+    overflow: visible;
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+  }
+  .kitchen-col:last-child { border-bottom: none; }
+}
 
 .kitchen-col__header {
   display: flex;
@@ -698,6 +715,12 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+@media (max-width: 767px) {
+  .kitchen-orders {
+    overflow-y: visible;
+    flex: none;
+  }
 }
 
 .kitchen-empty {
@@ -747,6 +770,10 @@
   color: var(--amber);
   line-height: 1;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kitchen-card--ready .kitchen-card__table { color: var(--green); }
 
