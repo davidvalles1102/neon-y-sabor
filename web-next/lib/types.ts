@@ -135,7 +135,9 @@ export type DeliveryOrder = {
   delivery_phone: string | null
   delivery_address: string | null
   delivery_fee: number
+  subtotal: number
   driver_id: string | null
+  pickup_staff_id: string | null
   payment_method: 'cash' | 'nequi'
   total: number
   notes: string | null
@@ -169,6 +171,7 @@ export type KitchenOrder = {
   status: 'in_kitchen' | 'ready' | 'delivered'
   order_type: 'dine_in' | 'takeout' | 'delivery'
   delivery_name: string | null
+  delivery_status: string | null
   notes: string | null
   created_at: string
   updated_at: string

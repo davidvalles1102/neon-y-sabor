@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import LoginClient from './LoginClient'
 
 export const metadata: Metadata = { title: 'Staff Login' }

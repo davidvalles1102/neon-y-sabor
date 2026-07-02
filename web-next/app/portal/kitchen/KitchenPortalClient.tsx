@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -52,6 +52,7 @@ export default function KitchenPortalClient() {
       .from('orders')
       .select('*, restaurant_tables(number), order_items(*, order_item_modifiers(*))')
       .in('status', ['in_kitchen', 'ready'])
+      .or('order_type.neq.delivery,delivery_status.in.(pending,preparing,ready)')
       .order('created_at', { ascending: true }) // FIFO
     const all = (data || []) as KitchenOrder[]
     setStartTimes((prev) => {

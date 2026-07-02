@@ -14,6 +14,8 @@ ALTER TABLE public.staff_members
 
 -- ─── 2. verify_staff_pin con rate limiting ──────────────────────────
 
+DROP FUNCTION IF EXISTS public.verify_staff_pin(text);
+
 CREATE OR REPLACE FUNCTION public.verify_staff_pin(p_pin text)
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER

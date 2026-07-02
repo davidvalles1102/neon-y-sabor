@@ -87,6 +87,7 @@ export default function OrdersClient() {
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null)
   const [waModalOpen, setWaModalOpen] = useState(false)
   const [waPhone, setWaPhone] = useState('')
+  const [deliveryFee, setDeliveryFee] = useState(0)
 
   const selectedTable = tables.find((t) => t.id === selectedTableId) ?? null
 
@@ -118,10 +119,12 @@ export default function OrdersClient() {
     const channel = supabase
       .channel(`pos-order-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, (payload) => {
-        const newStatus = (payload.new as { status?: string })?.status
-        if (!newStatus) return
-        setCurrentOrder((prev) => (prev && prev.id === orderId ? { ...prev, status: newStatus } : prev))
-        if (newStatus === 'ready') toast('✅ ¡Orden lista! Llevar a la mesa', 'success')
+        const p = payload.new as { status?: string; delivery_status?: string }
+        if (!p.status) return
+        setCurrentOrder((prev) => prev && prev.id === orderId
+          ? { ...prev, status: p.status!, delivery_status: p.delivery_status ?? prev.delivery_status }
+          : prev)
+        if (p.status === 'ready') toast('✅ ¡Orden lista! Llevar a la mesa', 'success')
       })
       .subscribe()
 
@@ -133,6 +136,7 @@ export default function OrdersClient() {
     setOrderType(type)
     setCurrentOrder(null)
     setSelectedTableId('')
+    setDeliveryFee(0)
   }
 
   const markTableOccupied = async (tableId: string) => {
@@ -164,7 +168,7 @@ export default function OrdersClient() {
 
     if (data?.length) {
       const o = data[0]
-      setCurrentOrder({ id: o.id, table_id: id, status: o.status, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
+      setCurrentOrder({ id: o.id, table_id: id, status: o.status, delivery_status: null, delivery_fee: 0, items: mapItems(o.order_items), subtotal: o.subtotal ?? 0, tax: o.tax ?? 0, total: o.total ?? 0 })
       toast(`Mesa ${table?.number}: orden activa cargada ✓`, 'success')
     } else {
       toast(`Mesa ${table?.number}: ocupada sin orden activa. Presiona "+ Nueva Orden" para comenzar.`, 'warning')
@@ -184,11 +188,12 @@ export default function OrdersClient() {
       delivery_phone: custPhone.trim() || null,
       delivery_address: orderType === 'delivery' ? (custAddress.trim() || null) : null,
       delivery_status: orderType !== 'dine_in' ? 'pending' : null,
+      delivery_fee: orderType === 'delivery' ? deliveryFee : 0,
       status: 'open',
     }).select().single()
 
     if (error) { toast('Error al crear orden', 'error'); return }
-    setCurrentOrder({ id: data.id, table_id: orderType === 'dine_in' ? selectedTableId || null : null, status: 'open', items: [], subtotal: 0, tax: 0, total: 0 })
+    setCurrentOrder({ id: data.id, table_id: orderType === 'dine_in' ? selectedTableId || null : null, status: 'open', delivery_status: orderType === 'delivery' ? 'pending' : null, delivery_fee: orderType === 'delivery' ? deliveryFee : 0, items: [], subtotal: 0, tax: 0, total: 0 })
     if (orderType === 'dine_in' && selectedTableId) await markTableOccupied(selectedTableId)
     const toastMsg = orderType === 'dine_in' ? `Orden nueva — Mesa ${selectedTable?.number}` : orderType === 'takeout' ? 'Orden Para Llevar creada' : 'Orden Domicilio creada'
     toast(toastMsg)
@@ -196,6 +201,10 @@ export default function OrdersClient() {
 
   const addItemToTicket = async (item: { id: string; name: string; price: number }, modifiers: Selection[] = []) => {
     if (!currentOrder) return
+    if (orderType === 'delivery' && (currentOrder.delivery_status === 'on_the_way' || currentOrder.delivery_status === 'delivered')) {
+      toast('Esta entrega ya fue tomada por el driver. Crea una nueva orden para ítems adicionales.', 'warning')
+      return
+    }
     const lineKey = buildLineKey(item.id, modifiers)
     const existing = currentOrder.items.find((i) => i.lineKey === lineKey)
     let newItems: TicketItem[]
@@ -224,9 +233,12 @@ export default function OrdersClient() {
     }
 
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
-    const { tax, total } = calcTotals(subtotal)
+    const { tax, total: itemsTotal } = calcTotals(subtotal)
+    const fee = orderType === 'delivery' ? deliveryFee : 0
+    const total = itemsTotal + fee
     const reopenKitchen = currentOrder.status === 'ready' || currentOrder.status === 'delivered'
     const update: Record<string, unknown> = { subtotal, tax, total }
+    if (fee) update.delivery_fee = fee
     if (reopenKitchen) update.status = 'in_kitchen'
     await supabase.from('orders').update(update).eq('id', currentOrder.id)
     setCurrentOrder({ ...currentOrder, status: reopenKitchen ? 'in_kitchen' : currentOrder.status, items: newItems, subtotal, tax, total })
@@ -235,6 +247,10 @@ export default function OrdersClient() {
 
   const changeQty = async (dbId: string, delta: number) => {
     if (!currentOrder) return
+    if (delta > 0 && orderType === 'delivery' && (currentOrder.delivery_status === 'on_the_way' || currentOrder.delivery_status === 'delivered')) {
+      toast('Esta entrega ya fue tomada por el driver. Crea una nueva orden para ítems adicionales.', 'warning')
+      return
+    }
     const it = currentOrder.items.find((i) => i.dbId === dbId)
     if (!it) return
     const newQty = it.qty + delta
@@ -249,9 +265,12 @@ export default function OrdersClient() {
     }
 
     const subtotal = newItems.reduce((s, i) => s + i.price * i.qty, 0)
-    const { tax, total } = calcTotals(subtotal)
+    const { tax, total: itemsTotal } = calcTotals(subtotal)
+    const fee = orderType === 'delivery' ? deliveryFee : 0
+    const total = itemsTotal + fee
     const reopenKitchen = delta > 0 && (currentOrder.status === 'ready' || currentOrder.status === 'delivered')
     const update: Record<string, unknown> = { subtotal, tax, total }
+    if (fee) update.delivery_fee = fee
     if (reopenKitchen) update.status = 'in_kitchen'
     await supabase.from('orders').update(update).eq('id', currentOrder.id)
     setCurrentOrder({ ...currentOrder, status: reopenKitchen ? 'in_kitchen' : currentOrder.status, items: newItems, subtotal, tax, total })
@@ -275,8 +294,20 @@ export default function OrdersClient() {
     if (orderType !== 'dine_in') update.delivery_status = 'pending'
     const { error } = await supabase.from('orders').update(update).eq('id', currentOrder.id)
     if (error) { toast('Error al enviar a cocina', 'error'); return }
-    setCurrentOrder({ ...currentOrder, status: 'in_kitchen' })
-    toast('Orden enviada a cocina 👨‍🍳', 'success')
+
+    if (orderType === 'delivery') {
+      // Auto-limpiar para delivery: la orden va a cocina y se rastrea desde el módulo de delivery
+      setCurrentOrder(null)
+      setCustName('')
+      setCustPhone('')
+      setCustAddress('')
+      setOrderNotes('')
+      setDeliveryFee(0)
+      toast('🛵 Delivery enviado a cocina — listo para el siguiente pedido', 'success')
+    } else {
+      setCurrentOrder({ ...currentOrder, status: 'in_kitchen' })
+      toast('Orden enviada a cocina 👨‍🍳', 'success')
+    }
   }
 
   const clearTicket = async () => {
@@ -400,6 +431,7 @@ export default function OrdersClient() {
       subtotal: currentOrder.subtotal,
       tax: currentOrder.tax,
       total: currentOrder.total,
+      delivery_fee: orderType === 'delivery' ? deliveryFee : 0,
       chargeTotal,
       redeemedPts,
       redeemedValue,
@@ -529,7 +561,13 @@ export default function OrdersClient() {
               <input type="text" className="form-control" placeholder="Nombre del cliente *" value={custName} onChange={(e) => setCustName(e.target.value)} />
               <input type="tel" className="form-control" placeholder="Teléfono *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} />
               {orderType === 'delivery' && (
-                <input type="text" className="form-control" placeholder="Dirección de entrega *" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} />
+                <>
+                  <input type="text" className="form-control" placeholder="Dirección de entrega *" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label className="form-label" style={{ marginBottom: 0, whiteSpace: 'nowrap', fontSize: '.8rem' }}>Costo delivery:</label>
+                    <input type="number" className="form-control" min="0" step="0.5" placeholder="0.00" style={{ maxWidth: 100 }} value={deliveryFee || ''} onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)} />
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -564,6 +602,12 @@ export default function OrdersClient() {
           </div>
 
           <div className="ticket-totals">
+            {orderType === 'delivery' && deliveryFee > 0 && currentOrder && (
+              <>
+                <div className="total-row"><span>Platillos</span><span>{fmt.currency(currentOrder.subtotal)}</span></div>
+                <div className="total-row"><span>Delivery</span><span>{fmt.currency(deliveryFee)}</span></div>
+              </>
+            )}
             <div className="total-row total-row--final"><span>TOTAL</span><span className="neon-green">{fmt.currency(currentOrder?.total ?? 0)}</span></div>
           </div>
 
@@ -672,6 +716,9 @@ export default function OrdersClient() {
                   </div>
                 ))}
                 <hr className="receipt__divider" />
+                {lastReceiptData.delivery_fee > 0 && (
+                  <div className="receipt__item"><span>Costo delivery</span><span>{fmt.currency(lastReceiptData.delivery_fee)}</span></div>
+                )}
                 {lastReceiptData.redeemedPts > 0 && (
                   <div className="receipt__item"><span>Puntos canjeados (-{lastReceiptData.redeemedPts} pts)</span><span>-{fmt.currency(lastReceiptData.redeemedValue)}</span></div>
                 )}

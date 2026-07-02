@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -23,7 +23,7 @@ const STATUS_CFG: Record<string, { label: string; cls: string; icon: string; nex
 const ORDER_STATUS_MAP: Record<string, string> = {
   preparing: 'in_kitchen',
   ready: 'ready',
-  on_the_way: 'ready',
+  on_the_way: 'delivered',  // quita de cocina cuando el driver sale
   delivered: 'delivered',
 }
 
@@ -56,10 +56,27 @@ export default function DeliveryClient() {
 
   const [dotSubscribed, setDotSubscribed] = useState(false)
   const [dotFlash, setDotFlash] = useState(false)
+  const [staffMap, setStaffMap] = useState<Record<string, string>>({})
+
+  // ── Edit state ──────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editFee, setEditFee] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [editItems, setEditItems] = useState<{ id: string; item_name: string; item_price: number; qty: number }[]>([])
 
   async function loadDrivers() {
-    const { data } = await supabase.from('drivers').select('*').order('full_name')
-    setDrivers((data as Driver[]) || [])
+    const [{ data: driversData }, { data: staffData }] = await Promise.all([
+      supabase.from('drivers').select('*').order('full_name'),
+      supabase.from('staff_members').select('id, full_name').eq('role', 'delivery').eq('active', true),
+    ])
+    setDrivers((driversData as Driver[]) || [])
+    const map: Record<string, string> = {}
+    ;((staffData || []) as { id: string; full_name: string }[]).forEach((s) => { map[s.id] = s.full_name })
+    setStaffMap(map)
   }
 
   async function loadZones() {
@@ -212,7 +229,52 @@ export default function DeliveryClient() {
 
   function openDetail(id: string) {
     const o = allOrders.find((x) => x.id === id)
-    if (o) setDetailOrder(o)
+    if (o) { setDetailOrder(o); setEditing(false) }
+  }
+
+  function openEdit() {
+    if (!detailOrder) return
+    setEditName(detailOrder.delivery_name ?? '')
+    setEditPhone(detailOrder.delivery_phone ?? '')
+    setEditAddress(detailOrder.delivery_address ?? '')
+    setEditFee(String(detailOrder.delivery_fee ?? 0))
+    setEditNotes(detailOrder.notes ?? '')
+    setEditItems(detailOrder.order_items.map((i) => ({ id: i.id, item_name: i.item_name, item_price: i.item_price, qty: i.quantity })))
+    setEditing(true)
+  }
+
+  async function saveEdit() {
+    if (!detailOrder) return
+    setSaving(true)
+
+    await Promise.all(
+      editItems.map((item) =>
+        item.qty <= 0
+          ? supabase.from('order_items').delete().eq('id', item.id)
+          : supabase.from('order_items').update({ quantity: item.qty }).eq('id', item.id)
+      )
+    )
+
+    const subtotal = editItems.filter((i) => i.qty > 0).reduce((s, i) => s + i.item_price * i.qty, 0)
+    const fee = parseFloat(editFee) || 0
+
+    const { error } = await supabase.from('orders').update({
+      delivery_name: editName.trim() || null,
+      delivery_phone: editPhone.trim() || null,
+      delivery_address: editAddress.trim() || null,
+      delivery_fee: fee,
+      notes: editNotes.trim() || null,
+      subtotal,
+      total: subtotal + fee,
+      updated_at: new Date().toISOString(),
+    }).eq('id', detailOrder.id)
+
+    if (error) { toast('Error al guardar', 'error'); setSaving(false); return }
+    toast('Orden actualizada ✓', 'success')
+    setEditing(false)
+    setDetailOrder(null)
+    await loadOrders()
+    setSaving(false)
   }
 
   return (
@@ -278,6 +340,7 @@ export default function DeliveryClient() {
                 key={o.id}
                 order={o}
                 drivers={drivers}
+                staffMap={staffMap}
                 onDetail={() => openDetail(o.id)}
                 onAdvance={(status) => advanceStatus(o.id, status)}
                 onAssignDriver={(driverId) => assignDriver(o.id, driverId)}
@@ -291,13 +354,14 @@ export default function DeliveryClient() {
         <div className="modal" style={{ maxWidth: 520 }}>
           <div className="modal-header">
             <h3>{detailOrder ? (detailOrder.order_type === 'delivery' ? '🛵 Orden Domicilio' : '🥡 Para Llevar') : 'Detalle de Orden'}</h3>
-            <button className="modal-close" onClick={() => setDetailOrder(null)}>✕</button>
+            <button className="modal-close" onClick={() => { setDetailOrder(null); setEditing(false) }}>✕</button>
           </div>
           {detailOrder && (() => {
             const o = detailOrder
             const ds = o.delivery_status || 'pending'
             const cfg = STATUS_CFG[ds]
             const isDelivery = o.order_type === 'delivery'
+            const canEdit = !['on_the_way', 'delivered'].includes(ds)
             let nextStatus = cfg.next
             if (!isDelivery && ds === 'ready') nextStatus = 'delivered'
             const nextCfg = nextStatus ? STATUS_CFG[nextStatus] : null
@@ -305,12 +369,88 @@ export default function DeliveryClient() {
               ? (isDelivery || ds !== 'ready' ? (nextCfg?.nextLabel ?? 'Avanzar') : '✅ Marcar Recogido')
               : null
 
+            if (editing) {
+              const editSubtotal = editItems.filter((i) => i.qty > 0).reduce((s, i) => s + i.item_price * i.qty, 0)
+              const editTotal = editSubtotal + (parseFloat(editFee) || 0)
+              return (
+                <>
+                  <div className="modal-body">
+                    <div className="flex-col gap-16">
+                      <div className="card" style={{ borderColor: 'var(--amber-dim)' }}>
+                        <h4 style={{ color: 'var(--amber)', marginBottom: 10 }}>✏️ Editar datos del cliente</h4>
+                        <div className="flex-col gap-8">
+                          <label className="text-xs text-muted">Nombre</label>
+                          <input className="form-control" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nombre del cliente" />
+                          <label className="text-xs text-muted">Teléfono</label>
+                          <input className="form-control" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Teléfono" />
+                          {isDelivery && (
+                            <>
+                              <label className="text-xs text-muted">Dirección</label>
+                              <input className="form-control" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Dirección de entrega" />
+                              <label className="text-xs text-muted">Costo de envío ($)</label>
+                              <input className="form-control" type="number" min="0" step="0.01" value={editFee} onChange={(e) => setEditFee(e.target.value)} placeholder="0.00" />
+                            </>
+                          )}
+                          <label className="text-xs text-muted">Notas</label>
+                          <input className="form-control" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Instrucciones especiales..." />
+                        </div>
+                      </div>
+                      <div className="card">
+                        <h4 style={{ marginBottom: 10 }}>✏️ Editar items</h4>
+                        {editItems.map((item, idx) => (
+                          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ flex: 1, fontSize: '.85rem' }}>
+                              <span style={{ opacity: item.qty <= 0 ? .35 : 1 }}>{item.item_name}</span>
+                              <span className="text-muted text-xs" style={{ marginLeft: 6 }}>{fmt.currency(item.item_price)}/u</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                style={{ width: 28, height: 28, padding: 0, fontSize: '.9rem' }}
+                                onClick={() => setEditItems((prev) => prev.map((it, i) => i === idx ? { ...it, qty: Math.max(0, it.qty - 1) } : it))}
+                              >−</button>
+                              <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, color: item.qty <= 0 ? 'var(--text-danger)' : undefined }}>
+                                {item.qty <= 0 ? '✕' : item.qty}
+                              </span>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                style={{ width: 28, height: 28, padding: 0, fontSize: '.9rem' }}
+                                onClick={() => setEditItems((prev) => prev.map((it, i) => i === idx ? { ...it, qty: it.qty + 1 } : it))}
+                              >+</button>
+                            </div>
+                            <span className="text-sm" style={{ minWidth: 56, textAlign: 'right', color: item.qty <= 0 ? 'var(--text-danger)' : 'var(--text-muted)' }}>
+                              {item.qty <= 0 ? 'Eliminar' : fmt.currency(item.item_price * item.qty)}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="receipt__item receipt__total mt-8" style={{ paddingTop: 8, borderTop: '1px solid var(--border-lit)' }}>
+                          <span>Total estimado</span>
+                          <span className="neon-amber">{fmt.currency(editTotal)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button className="btn btn-outline" onClick={() => setEditing(false)} disabled={saving}>Cancelar</button>
+                    <button className="btn btn-primary" onClick={saveEdit} disabled={saving || editItems.every((i) => i.qty <= 0)}>
+                      {saving ? 'Guardando…' : '💾 Guardar cambios'}
+                    </button>
+                  </div>
+                </>
+              )
+            }
+
             return (
               <>
                 <div className="modal-body">
                   <div className="flex-col gap-16">
                     <div className="card" style={{ borderColor: 'var(--amber-dim)' }}>
-                      <h4 style={{ color: 'var(--amber)', marginBottom: 10 }}>👤 Cliente</h4>
+                      <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
+                        <h4 style={{ color: 'var(--amber)' }}>👤 Cliente</h4>
+                        {canEdit && (
+                          <button className="btn btn-outline btn-sm" onClick={openEdit}>✏️ Editar</button>
+                        )}
+                      </div>
                       <div className="flex-col gap-6 text-sm">
                         <div className="flex justify-between"><span className="text-muted">Nombre</span><span style={{ fontWeight: 600 }}>{o.delivery_name}</span></div>
                         <div className="flex justify-between"><span className="text-muted">Teléfono</span><span>{o.delivery_phone}</span></div>
@@ -324,7 +464,14 @@ export default function DeliveryClient() {
                           </span>
                         </div>
                         {isDelivery && (
-                          <div className="flex justify-between"><span className="text-muted">Repartidor</span><span>{drivers.find((d) => d.id === o.driver_id)?.full_name ?? 'Sin asignar'}</span></div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Repartidor</span>
+                            <span>
+                              {o.pickup_staff_id
+                                ? `🛵 ${staffMap[o.pickup_staff_id] ?? 'Driver portal'}`
+                                : drivers.find((d) => d.id === o.driver_id)?.full_name ?? 'Sin asignar'}
+                            </span>
+                          </div>
                         )}
                         {o.delivery_fee > 0 && (
                           <div className="flex justify-between"><span className="text-muted">Costo de envío</span><span>{fmt.currency(o.delivery_fee)}</span></div>
@@ -354,6 +501,11 @@ export default function DeliveryClient() {
                       <span className="text-muted text-sm">Estado actual</span>
                       <span className={`badge ${cfg.cls}`}>{cfg.icon} {cfg.label}</span>
                     </div>
+                    {!canEdit && (
+                      <div className="text-xs text-muted" style={{ background: 'var(--bg-2)', padding: '6px 10px', borderRadius: 6 }}>
+                        🔒 No se puede editar — el repartidor ya tomó el pedido
+                      </div>
+                    )}
                     <div className="text-muted text-xs">Recibida: {fmt.datetime(o.created_at)}</div>
                   </div>
                 </div>
@@ -456,9 +608,10 @@ export default function DeliveryClient() {
   )
 }
 
-function DeliveryCard({ order, drivers, onDetail, onAdvance, onAssignDriver }: {
+function DeliveryCard({ order, drivers, staffMap, onDetail, onAdvance, onAssignDriver }: {
   order: BoardOrder
   drivers: Driver[]
+  staffMap: Record<string, string>
   onDetail: () => void
   onAdvance: (status: string) => void
   onAssignDriver: (driverId: string) => void
@@ -491,20 +644,26 @@ function DeliveryCard({ order, drivers, onDetail, onAdvance, onAssignDriver }: {
           {order.payment_method === 'nequi' ? '📱 Nequi — verificar pago' : '💵 Efectivo'}
         </div>
         {isDelivery && (
-          <div className="flex gap-8 items-center mt-8">
+          <div className="flex gap-8 items-center mt-8" style={{ flexWrap: 'wrap' }}>
             <span className="text-xs text-muted">🛵 Repartidor:</span>
-            <select
-              className="form-control driver-select"
-              style={{ flex: 1, padding: '4px 8px', fontSize: '.8rem' }}
-              value={order.driver_id ?? ''}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => onAssignDriver(e.target.value)}
-            >
-              <option value="">Sin asignar</option>
-              {drivers.filter((d) => d.active).map((d) => (
-                <option key={d.id} value={d.id}>{d.full_name}</option>
-              ))}
-            </select>
+            {(order as BoardOrder & { pickup_staff_id?: string | null }).pickup_staff_id ? (
+              <span className="badge badge-amber text-xs">
+                {staffMap[(order as BoardOrder & { pickup_staff_id?: string | null }).pickup_staff_id!] ?? 'Driver portal'}
+              </span>
+            ) : (
+              <select
+                className="form-control driver-select"
+                style={{ flex: 1, padding: '4px 8px', fontSize: '.8rem' }}
+                value={order.driver_id ?? ''}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onAssignDriver(e.target.value)}
+              >
+                <option value="">Sin asignar</option>
+                {drivers.filter((d) => d.active).map((d) => (
+                  <option key={d.id} value={d.id}>{d.full_name}</option>
+                ))}
+              </select>
+            )}
           </div>
         )}
       </div>

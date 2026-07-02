@@ -15,6 +15,8 @@ export type CurrentOrder = {
   id: string
   table_id: string | null
   status: string
+  delivery_status: string | null
+  delivery_fee: number
   items: TicketItem[]
   subtotal: number
   tax: number
@@ -29,6 +31,7 @@ export type ReceiptData = {
   subtotal: number
   tax: number
   total: number
+  delivery_fee: number
   chargeTotal: number
   redeemedPts: number
   redeemedValue: number
